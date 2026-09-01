@@ -1,4 +1,4 @@
-import { pesos } from './formato.js';
+import { pesos, porcentaje } from './formato.js';
 
 const ETIQUETAS = [
   ['vendido', 'Vendido'], ['abonado', 'Abonado'], ['porCobrar', 'Por cobrar'],
@@ -148,6 +148,29 @@ export function construirVistaTablero(tablero, ahora = new Date()) {
           medio: a.medio ?? '',
           valorTexto: texto(a.valor)
         }))
+      };
+    }),
+    // Los socios y lo que puso cada uno por la tierra. Acá solo se escapa y se
+    // formatea, fila por fila: la aritmética de la tabla —el orden, el total de
+    // los seis y cuánto se aparta cada uno de lo que le tocaba— necesita ver el
+    // conjunto y vive en `construirVistaSocios` (assets/js/paneles.js).
+    //
+    // `seguro` conserva los números intactos (escaparTextos solo toca cadenas),
+    // así que `s.participacion` y `s.total` siguen sirviendo para calcular.
+    socios: (tablero.socios ?? []).map(s => {
+      const seguro = escaparTextos(s);
+      return {
+        ...seguro,
+        nombre: seguro.nombre ?? '',
+        participacionTexto: typeof s.participacion === 'number'
+          ? porcentaje(s.participacion)
+          : '—',
+        pagos: (seguro.pagos ?? []).map(p => ({
+          ...p,
+          etiqueta: p.etiqueta ?? '',
+          valorTexto: texto(p.valor)
+        })),
+        totalTexto: texto(s.total)
       };
     }),
     egresosPorCategoria: [...porCategoria.entries()]

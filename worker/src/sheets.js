@@ -4,7 +4,7 @@ const ALCANCE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 const URL_TOKEN = 'https://oauth2.googleapis.com/token';
 // Clave interna -> nombre real de la pestaña en la hoja.
 //
-// Las cuatro viven DENTRO del libro de control financiero, no en un archivo
+// Todas viven DENTRO del libro de control financiero, no en un archivo
 // aparte, y por eso llevan el prefijo «Tablero»: el libro ya tiene RESUMEN y
 // EGRESOS propios, y Sheets no admite dos pestañas con el mismo nombre.
 //
@@ -13,11 +13,17 @@ const URL_TOKEN = 'https://oauth2.googleapis.com/token';
 // desde la interfaz —no se puede por API— y esa autorización se vuelve a pedir
 // cada vez que algo cambia de sitio. Un tablero que depende de un clic manual
 // para no quedarse en blanco es un punto de falla que no vale la pena.
+//
+// El número de pestañas no está escrito en ninguna otra parte del archivo: la
+// lista es la única fuente. `leerEspejo` pide tantos rangos como filas tenga y
+// exige que lleguen todos, y `normalizarTablero` avisa por cada una que llegue
+// vacía. Agregar una pestaña nueva es agregar una fila acá.
 const PESTANAS = [
   ['Resumen', 'Tablero Resumen'],
   ['Cartera', 'Tablero Cartera'],
   ['Abonos', 'Tablero Abonos'],
-  ['Egresos', 'Tablero Egresos']
+  ['Egresos', 'Tablero Egresos'],
+  ['Socios', 'Tablero Socios']
 ];
 
 export async function tokenDeAcceso(credenciales, { fetchImpl = fetch, ahora = new Date() } = {}) {
@@ -173,6 +179,13 @@ const CLAVES_RESUMEN = Object.fromEntries(
   CONCEPTOS_RESUMEN.map(([etiqueta, campo]) => [etiqueta.toLowerCase(), campo])
 );
 
+// «Tablero Socios» tiene siete columnas: A el nombre, B la participación, de la
+// C a la F los cuatro aportes con que se pagó la tierra, y G el total.
+const COLUMNA_NOMBRE = 0;
+const COLUMNA_PARTICIPACION = 1;
+const COLUMNAS_APORTE = [2, 3, 4, 5];
+const COLUMNA_TOTAL = 6;
+
 export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
   const avisos = [];
   const cuerpo = (p) => (crudo[p] ?? []).slice(1);
@@ -224,7 +237,7 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     const valor = numero(f[2], 'Abonos', i + 2, 'Valor');
     if (lote === null || valor === null) return;
     if (!abonosPorLote.has(lote)) abonosPorLote.set(lote, []);
-    abonosPorLote.get(lote).push({ fecha: String(f[0] ?? ''), valor, medio: String(f[3] ?? '') });
+    abonosPorLote.get(lote).push({ fecha: fechaLegible(f[0]), valor, medio: String(f[3] ?? '') });
   });
 
   const cartera = cuerpo('Cartera').map((f, i) => {
@@ -268,12 +281,48 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     const valor = numero(f[3], 'Egresos', i + 2, 'Valor', { categoria });
     if (valor === null) return null;
     return {
-      fecha: String(f[0] ?? ''),
+      fecha: fechaLegible(f[0]),
       categoria,
       concepto: String(f[2] ?? ''),
       valor
     };
   }).filter(Boolean);
 
-  return { leidoEn: ahora.toISOString(), resumen, cartera, egresos, avisos };
+  // --- los socios y lo que puso cada uno por la tierra ---------------------
+  //
+  // El rótulo de cada aporte sale del encabezado de la hoja, no de acá: cada
+  // ronda tiene su propia fecha («Escritura dic-2024», «Compromiso jun-2025») y
+  // una etiqueta quemada en el código quedaría rotulando plata de otro año la
+  // próxima vez que entre una. Si el encabezado viene vacío se cae a un rótulo
+  // genérico, que es feo pero no miente.
+  const encabezadoSocios = (crudo.Socios ?? [])[0] ?? [];
+  const rotuloAporte = (columna, i) => {
+    const r = String(encabezadoSocios[columna] ?? '').trim();
+    return r === '' ? `Aporte ${i + 1}` : r;
+  };
+
+  const socios = cuerpo('Socios').map((f, i) => {
+    const fila = f ?? [];
+    // Una fila enteramente en blanco no dice nada y no hay nada que revisar en
+    // ella: seis avisos por un renglón que alguien dejó vacío en el medio de la
+    // tabla serían ruido, no información.
+    if (fila.every((c) => String(c ?? '').trim() === '')) return null;
+    // A diferencia de un egreso, acá la fila NO se descarta cuando algo no se
+    // puede leer: descartarla borra a un socio entero de la tabla, y el que
+    // desaparece es justo el que tiene el dato raro. La celda ilegible queda en
+    // null —que la vista pinta como raya, nunca como $0— y el aviso dice cuál
+    // es. Todos los números pasan por `numero`, igual que en el resto del
+    // archivo, para que ninguno se vuelva un cero callado.
+    return {
+      nombre: String(fila[COLUMNA_NOMBRE] ?? ''),
+      participacion: numero(fila[COLUMNA_PARTICIPACION], 'Socios', i + 2, 'Participación'),
+      pagos: COLUMNAS_APORTE.map((columna, j) => {
+        const etiqueta = rotuloAporte(columna, j);
+        return { etiqueta, valor: numero(fila[columna], 'Socios', i + 2, etiqueta) };
+      }),
+      total: numero(fila[COLUMNA_TOTAL], 'Socios', i + 2, 'Total aportado')
+    };
+  }).filter(Boolean);
+
+  return { leidoEn: ahora.toISOString(), resumen, cartera, egresos, socios, avisos };
 }

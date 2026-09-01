@@ -403,6 +403,144 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   font-variant-numeric: tabular-nums;
 }
 
+/* --- pestaña «Los socios» ----------------------------------------------- */
+.tablero .socios-intro { margin: 0 0 .9rem; font-size: .9rem; color: #6b6b6b; }
+.tablero .socios-nota { margin: .8rem 0 0; font-size: .88rem; color: #6b6b6b; }
+
+/* Ocho columnas no caben en 390 px de ninguna manera honesta. Debajo de 860 px
+   la tabla se apila —cada socio queda como una tarjeta y el nombre de la
+   columna sale del `data-col` de cada celda—, y de ahí para arriba vuelve a ser
+   una tabla de verdad. La envoltura con scroll es el cinturón para el tramo
+   angosto de escritorio, donde ya es tabla pero puede quedar justa. */
+.tablero .tabla-envoltura { overflow-x: auto; }
+.tablero .tabla-socios {
+  width: 100%;
+  /* Ocho columnas con cifras que no se parten: por debajo de esto la tabla
+     empieza a picar los nombres en una letra por línea. Antes de llegar ahí
+     prefiere desbordar y que la envoltura de arriba se deslice. */
+  min-width: 54rem;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: .9rem;
+}
+.tablero .tabla-socios th,
+.tablero .tabla-socios td { padding: .55rem .6rem; text-align: left; }
+.tablero .tabla-socios thead th {
+  font-size: .68rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #7a7a72;
+  font-weight: 600;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: bottom;
+}
+.tablero .tabla-socios tbody tr + tr th,
+.tablero .tabla-socios tbody tr + tr td { border-top: 1px solid var(--borde); }
+.tablero .tabla-socios .socio-nombre {
+  font-weight: 600;
+  text-align: left;
+  width: 15rem;
+  overflow-wrap: anywhere;
+}
+.tablero .tabla-socios .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.tablero .tabla-socios .aporte-total { font-weight: 700; }
+/* `.tablero .incompleto` (al final del archivo) le pone `display: inline-block`
+   y `white-space: normal` a lo que marca en ámbar. En un <td> el inline-block
+   saca la celda de la fila y desarma la tabla: acá se le devuelve el display
+   que le toca. El texto sí se deja envolver — «$X + 2 socios sin leer» con
+   nowrap estira la columna hasta empujar la diferencia fuera de la vista. */
+.tablero .tabla-socios td.incompleto { display: table-cell; white-space: normal; }
+.tablero .tabla-socios tfoot th,
+.tablero .tabla-socios tfoot td {
+  border-top: 2px solid var(--borde);
+  font-weight: 700;
+  background: #f6f5f1;
+}
+
+/* La columna que importa: cuánto se aparta cada socio de lo que le tocaba.
+   Verde puso de más, rojo puso de menos, gris está exacto. El gris del `$0` es
+   distinto del gris de la raya a propósito — un cero de verdad y un «no se pudo
+   calcular» no pueden verse igual. */
+.tablero .tabla-socios .diferencia { font-weight: 700; }
+.tablero .tabla-socios .diferencia[data-dif="exacto"] { color: #6b6b6b; font-weight: 400; }
+.tablero .tabla-socios .diferencia[data-dif="de-mas"] { color: #1f6b3a; }
+.tablero .tabla-socios .diferencia[data-dif="de-menos"] { color: #9b2c2c; }
+.tablero .tabla-socios .diferencia[data-dif="sin-dato"] { color: #6b6b6b; font-weight: 400; }
+.tablero .alerta-reparto { color: #8a5a00; }
+
+@media (max-width: 859px) {
+  /* El encabezado no se borra: se saca de la pantalla pero sigue leyéndose en
+     un lector de pantalla, que es como esta tabla se sigue entendiendo. */
+  .tablero .tabla-socios thead {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .tablero .tabla-socios,
+  .tablero .tabla-socios tbody,
+  .tablero .tabla-socios tfoot,
+  .tablero .tabla-socios tr,
+  .tablero .tabla-socios th,
+  .tablero .tabla-socios td { display: block; }
+  /* El ancho mínimo de la tabla es para el modo tabla. Apilada no aplica, y si
+     se queda puesto la envoltura se lleva un scroll horizontal de 864 px sobre
+     unas tarjetas que caben de sobra. */
+  .tablero .tabla-socios { min-width: 0; }
+  .tablero .tabla-socios .socio-nombre { width: auto; }
+  .tablero .tabla-socios tr {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    padding: .3rem .2rem .45rem;
+    margin-bottom: .7rem;
+    background: #fff;
+  }
+  .tablero .tabla-socios tbody tr + tr th,
+  .tablero .tabla-socios tbody tr + tr td { border-top: 0; }
+  .tablero .tabla-socios .socio-nombre {
+    font-size: 1rem;
+    padding-bottom: .4rem;
+    border-bottom: 1px solid var(--borde);
+    margin-bottom: .15rem;
+  }
+  .tablero .tabla-socios td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .3rem .7rem;
+  }
+  /* El rótulo de la columna, que en escritorio vive en el <thead>. */
+  .tablero .tabla-socios td::before {
+    content: attr(data-col);
+    color: #7a7a72;
+    font-size: .82rem;
+    font-weight: 400;
+    text-align: left;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .tablero .tabla-socios .num { white-space: normal; text-align: right; }
+  /* Misma pelea que arriba con `.tablero .incompleto`, del otro lado: apilada,
+     la celda es una fila de rótulo + cifra, no un inline-block. */
+  .tablero .tabla-socios td.incompleto { display: flex; }
+  .tablero .tabla-socios .diferencia {
+    margin-top: .2rem;
+    padding-top: .45rem;
+    border-top: 1px solid var(--borde);
+  }
+  .tablero .tabla-socios tfoot th,
+  .tablero .tabla-socios tfoot td { border-top: 0; }
+  .tablero .tabla-socios tfoot tr { background: #f6f5f1; }
+}
+
 /* --- avisos ------------------------------------------------------------- */
 .tablero .avisos h2 { font-size: 1rem; margin: 0 0 .5rem; }
 .tablero .avisos ul { margin: 0; padding-left: 1.1rem; }

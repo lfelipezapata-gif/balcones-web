@@ -37,6 +37,8 @@
             aria-selected="true" aria-controls="panel-lotes">Los lotes</button>
     <button type="button" class="pestana" id="tab-gastos" role="tab"
             aria-selected="false" aria-controls="panel-gastos">En qué se ha gastado</button>
+    <button type="button" class="pestana" id="tab-socios" role="tab"
+            aria-selected="false" aria-controls="panel-socios">Los socios</button>
   </nav>
 
   <section id="panel-lotes" role="tabpanel" aria-labelledby="tab-lotes">
@@ -58,13 +60,19 @@
     <div id="movimientos" class="movimientos"></div>
   </section>
 
+  <section id="panel-socios" role="tabpanel" aria-labelledby="tab-socios" hidden>
+    <div id="socios"></div>
+  </section>
+
   <section id="avisos" class="avisos"></section>
 </main>
 
 <script type="module">
 import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js';
 import { construirVistaTablero, escapar } from '../assets/js/tablero.js';
-import { construirCifras, construirVistaLotes, construirVistaGastos } from '../assets/js/paneles.js';
+import {
+  construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios
+} from '../assets/js/paneles.js';
 import { pintarMapa } from '../assets/js/mapa.js';
 
 const $ = (id) => document.getElementById(id);
@@ -86,7 +94,11 @@ function mostrarError(mensaje) {
 
 /* --- pestañas ---------------------------------------------------------- */
 
-const PESTANAS = [['tab-lotes', 'panel-lotes'], ['tab-gastos', 'panel-gastos']];
+const PESTANAS = [
+  ['tab-lotes', 'panel-lotes'],
+  ['tab-gastos', 'panel-gastos'],
+  ['tab-socios', 'panel-socios']
+];
 
 function verPestana(tabActiva) {
   for (const [tab, panel] of PESTANAS) {
@@ -234,6 +246,82 @@ function pintarGastos(vista) {
   }
 }
 
+/* --- los socios -------------------------------------------------------- */
+
+// La tabla de lo que puso cada socio por la tierra.
+//
+// Todo el texto que sale de la hoja —el nombre del socio y el rótulo de cada
+// ronda de aportes— llega ya escapado desde `construirVistaTablero`. Lo único
+// que se interpola sin venir de ahí es `diferenciaEstado`, que sale de un
+// vocabulario cerrado de assets/js/paneles.js ('exacto', 'de-mas', 'de-menos',
+// 'sin-dato') y por eso puede ir dentro de un atributo.
+//
+// `data-col` repite el nombre de la columna en cada celda. No es decorativo: en
+// pantalla angosta la tabla se apila y el CSS saca de ahí el rótulo de cada
+// dato. Sin él, en el teléfono queda una lista de cifras sin nombre.
+function pintarSocios(vista) {
+  const s = construirVistaSocios(vista.socios);
+
+  if (s.socios.length === 0) {
+    $('socios').innerHTML =
+      '<p class="invitacion">Todavía no hay aportes de socios que mostrar. Mirá los avisos del final.</p>';
+    return;
+  }
+
+  const cols = s.etiquetasPagos;
+  const celdasPago = (pagos) => pagos.map((p, i) =>
+    `<td class="num" data-col="${cols[i] ?? ''}">${p.valorTexto}</td>`).join('');
+
+  const filas = s.socios.map(x => `
+    <tr>
+      <th scope="row" class="socio-nombre">${x.nombre || '—'}</th>
+      <td class="num" data-col="Participación">${x.participacionTexto}</td>
+      ${celdasPago(x.pagos)}
+      <td class="num aporte-total" data-col="Total aportado">${x.totalTexto}</td>
+      <td class="num diferencia" data-col="Diferencia" data-dif="${x.diferenciaEstado}">
+        ${x.diferenciaTexto}</td>
+    </tr>`).join('');
+
+  const pie = `
+    <tr>
+      <th scope="row" class="socio-nombre">Total</th>
+      <td class="num${s.participacionCuadra ? '' : ' incompleto'}"
+          data-col="Participación">${s.participacionTotalTexto}</td>
+      ${s.totalesPagos.map((t, i) =>
+        `<td class="num${t.incompleto ? ' incompleto' : ''}" data-col="${cols[i] ?? ''}">${t.texto}</td>`).join('')}
+      <td class="num aporte-total${s.incompleto ? ' incompleto' : ''}"
+          data-col="Total aportado">${s.totalTexto}</td>
+      <td class="num diferencia" data-col="Diferencia"
+          data-dif="${s.diferenciaTotalEstado}">${s.diferenciaTotalTexto}</td>
+    </tr>`;
+
+  const avisoReparto = s.participacionCuadra ? '' :
+    `<p class="socios-nota alerta-reparto">Las participaciones no suman 100 %
+      (suman ${s.participacionTotalTexto}). Mientras no cuadren, lo que le
+      corresponde a cada uno está mal repartido en la hoja.</p>`;
+
+  $('socios').innerHTML = `
+    <p class="socios-intro">Lo que puso cada socio por la tierra. La última columna
+      es la diferencia entre lo que aportó y lo que le corresponde por su
+      participación: en verde puso de más, en rojo puso de menos, y en gris está exacto.</p>
+    <div class="tabla-envoltura">
+      <table class="tabla-socios">
+        <thead>
+          <tr>
+            <th scope="col">Socio</th>
+            <th scope="col">Participación</th>
+            ${cols.map(c => `<th scope="col">${c}</th>`).join('')}
+            <th scope="col">Total aportado</th>
+            <th scope="col">Diferencia</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+        <tfoot>${pie}</tfoot>
+      </table>
+    </div>
+    ${avisoReparto}`;
+}
+
 /* --- carga ------------------------------------------------------------- */
 
 async function cargar(credencial) {
@@ -281,6 +369,7 @@ async function cargar(credencial) {
   }
 
   pintarGastos(v);
+  pintarSocios(v);
 
   // Los avisos del plano se muestran junto con los del Worker, en la misma
   // lista: los dos dicen «esto que ves puede estar mal, andá a revisar la

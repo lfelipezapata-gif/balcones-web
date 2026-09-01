@@ -44,19 +44,21 @@ test('tokenDeAcceso avisa si Google rechaza', async () => {
   await assert.rejects(() => tokenDeAcceso(credenciales, { fetchImpl, ahora: AHORA }), /cuenta de servicio/i);
 });
 
-test('leerEspejo pide las cuatro pestañas en una sola llamada', async () => {
+test('leerEspejo pide las cinco pestañas en una sola llamada', async () => {
   let url;
   const fetchImpl = async (u) => {
     url = u;
     return { ok: true, json: async () => ({ valueRanges: [
       { values: [['Concepto', 'Valor'], ['Vendido', '1500000000']] },
-      { values: [['Lote']] }, { values: [['Fecha']] }, { values: [['Fecha']] }
+      { values: [['Lote']] }, { values: [['Fecha']] }, { values: [['Fecha']] },
+      { values: [['Socio']] }
     ] }) };
   };
   const crudo = await leerEspejo({ fetchImpl, idHoja: 'HOJA1', tokenAcceso: 't' });
   assert.match(url, /HOJA1/);
-  assert.equal((url.match(/ranges=/g) || []).length, 4);
+  assert.equal((url.match(/ranges=/g) || []).length, 5);
   assert.deepEqual(crudo.Resumen[1], ['Vendido', '1500000000']);
+  assert.deepEqual(crudo.Socios, [['Socio']], 'la pestaña de socios entra por su clave');
 });
 
 test('leerEspejo avisa si Sheets falla', async () => {
@@ -84,6 +86,14 @@ const CRUDO = {
     ['Fecha', 'Categoría', 'Concepto', 'Valor'],
     ['2026-04-29', 'Acueducto', 'Red principal del loteo', '99527738'],
     ['2026-03-31', 'Adecuaciones', 'Barrera viva de eugenios', '8000000']
+  ],
+  // Socios inventados y cifras de juguete: los nombres reales viven en la hoja
+  // y no entran a este repositorio (ver test/secretos.test.js en la raíz).
+  Socios: [
+    ['Socio', 'Participación', 'Escritura dic-2024', 'Compromiso jun-2025',
+     'Adicional jul-2025', 'Compromiso dic-2025', 'Total aportado'],
+    ['Sociedad Primera S.A.S.', 0.5, '100000000', '50000000', '25000000', '30000000', '205000000'],
+    ['Sociedad Segunda S.A.S.', 0.5, '100000000', '50000000', '25000000', '20000000', '195000000']
   ]
 };
 
@@ -180,7 +190,8 @@ test('leerEspejo pide valores sin formatear', async () => {
     url = u;
     return { ok: true, json: async () => ({ valueRanges: [
       { values: [['Concepto', 'Valor'], ['Vendido', 1500000000]] },
-      { values: [['Lote']] }, { values: [['Fecha']] }, { values: [['Fecha']] }
+      { values: [['Lote']] }, { values: [['Fecha']] }, { values: [['Fecha']] },
+      { values: [['Socio']] }
     ] }) };
   };
   await leerEspejo({ fetchImpl, idHoja: 'HOJA1', tokenAcceso: 't' });
@@ -188,21 +199,33 @@ test('leerEspejo pide valores sin formatear', async () => {
 });
 
 // --- Hallazgo 5: una respuesta truncada no puede rellenarse en silencio ---
-test('leerEspejo falla si no llegan las cuatro pestañas', async () => {
+// Lo que fija esta prueba no es el número de pestañas —ese sube cada vez que se
+// agrega una— sino que una respuesta corta se RECHAZA en vez de rellenarse con
+// arreglos vacíos. Rellenar volvía una lectura parcial indistinguible de una
+// hoja vacía, y aguas abajo cualquier suma daba 0.
+test('leerEspejo falla si llegan menos rangos de los que pidió', async () => {
   const fetchImpl = async () => ({ ok: true, json: async () => ({ valueRanges: [
     { values: [['Concepto', 'Valor']] }
   ] }) });
   await assert.rejects(
     () => leerEspejo({ fetchImpl, idHoja: 'X', tokenAcceso: 't' }),
-    /incompleta|cuatro/i
+    /incompleta/i
   );
+});
+
+test('a leerEspejo tampoco le sirve que llegue uno de más', async () => {
+  const fetchImpl = async () => ({ ok: true, json: async () => ({ valueRanges: [
+    { values: [['a']] }, { values: [['b']] }, { values: [['c']] },
+    { values: [['d']] }, { values: [['e']] }, { values: [['f']] }
+  ] }) });
+  await assert.rejects(() => leerEspejo({ fetchImpl, idHoja: 'X', tokenAcceso: 't' }), /incompleta/i);
 });
 
 test('leerEspejo falla si un rango llega sin cuerpo', async () => {
   const fetchImpl = async () => ({ ok: true, json: async () => ({ valueRanges: [
-    { values: [['a']] }, { values: [['b']] }, null, { values: [['d']] }
+    { values: [['a']] }, { values: [['b']] }, null, { values: [['d']] }, { values: [['e']] }
   ] }) });
-  await assert.rejects(() => leerEspejo({ fetchImpl, idHoja: 'X', tokenAcceso: 't' }), /incompleta|cuatro/i);
+  await assert.rejects(() => leerEspejo({ fetchImpl, idHoja: 'X', tokenAcceso: 't' }), /incompleta/i);
 });
 
 // --- Menor 16: idHoja sin codificar ---
@@ -211,7 +234,8 @@ test('leerEspejo codifica el id de la hoja', async () => {
   const fetchImpl = async (u) => {
     url = u;
     return { ok: true, json: async () => ({ valueRanges: [
-      { values: [['a']] }, { values: [['b']] }, { values: [['c']] }, { values: [['d']] }
+      { values: [['a']] }, { values: [['b']] }, { values: [['c']] },
+      { values: [['d']] }, { values: [['e']] }
     ] }) };
   };
   await leerEspejo({ fetchImpl, idHoja: 'X/values:batchGet?ranges=Secreta&x=', tokenAcceso: 't' });
@@ -225,7 +249,8 @@ test('leerEspejo manda el token de acceso en el encabezado', async () => {
   const fetchImpl = async (u, o) => {
     opciones = o;
     return { ok: true, json: async () => ({ valueRanges: [
-      { values: [['a']] }, { values: [['b']] }, { values: [['c']] }, { values: [['d']] }
+      { values: [['a']] }, { values: [['b']] }, { values: [['c']] },
+      { values: [['d']] }, { values: [['e']] }
     ] }) };
   };
   await leerEspejo({ fetchImpl, idHoja: 'HOJA1', tokenAcceso: 'ya29.token' });
@@ -251,7 +276,7 @@ test('tokenDeAcceso avisa si la respuesta llega sin access_token', async () => {
 test('normalizarTablero avisa por cada pestaña que llega vacía', () => {
   const t = normalizarTablero({}, { ahora: AHORA });
   const vacias = t.avisos.filter(a => a.tipo === 'pestana-vacia').map(a => a.pestana);
-  assert.deepEqual(vacias, ['Resumen', 'Cartera', 'Abonos', 'Egresos']);
+  assert.deepEqual(vacias, ['Resumen', 'Cartera', 'Abonos', 'Egresos', 'Socios']);
   assert.ok(t.avisos.length > 0, 'una lectura vacía no puede verse igual que una hoja sana');
 });
 
@@ -374,16 +399,17 @@ test('una pestaña que quedó solo con el encabezado también avisa', () => {
   assert.deepEqual(vacias, ['Egresos'], 'sin filas de datos es vacía, aunque venga el encabezado');
 });
 
-test('las cuatro pestañas reducidas a su encabezado avisan las cuatro', () => {
+test('todas las pestañas reducidas a su encabezado avisan una por una', () => {
   const soloEncabezados = {
     Resumen: [['Concepto', 'Valor']],
     Cartera: [['Lote', 'Área', 'Comprador']],
     Abonos: [['Fecha', 'Lote', 'Valor', 'Medio']],
-    Egresos: [['Fecha', 'Categoría', 'Concepto', 'Valor']]
+    Egresos: [['Fecha', 'Categoría', 'Concepto', 'Valor']],
+    Socios: [['Socio', 'Participación', 'Total aportado']]
   };
   const t = normalizarTablero(soloEncabezados, { ahora: AHORA });
   const vacias = t.avisos.filter(a => a.tipo === 'pestana-vacia').map(a => a.pestana);
-  assert.deepEqual(vacias, ['Resumen', 'Cartera', 'Abonos', 'Egresos']);
+  assert.deepEqual(vacias, ['Resumen', 'Cartera', 'Abonos', 'Egresos', 'Socios']);
 });
 
 test('una pestaña con una sola fila de datos no se marca como vacía', () => {
@@ -423,4 +449,108 @@ test('lo que no es un serial de fecha se devuelve tal cual', () => {
   assert.equal(fechaLegible(undefined), '');
   assert.equal(fechaLegible(0), '0', 'un 0 no es una fecha: cayó en la columna equivocada y se nota');
   assert.equal(fechaLegible(-5), '-5');
+});
+
+// --- «Tablero Socios»: lo que puso cada socio por la tierra -----------------
+
+test('normalizarTablero devuelve un socio por fila, con sus cuatro pagos y su total', () => {
+  const t = normalizarTablero(CRUDO, { ahora: AHORA });
+  assert.equal(t.socios.length, 2);
+  const [a, b] = t.socios;
+  assert.equal(a.nombre, 'Sociedad Primera S.A.S.');
+  assert.equal(a.participacion, 0.5);
+  assert.equal(a.total, 205000000);
+  assert.equal(a.pagos.length, 4);
+  assert.deepEqual(a.pagos.map(p => p.valor), [100000000, 50000000, 25000000, 30000000]);
+  assert.equal(b.total, 195000000);
+  assert.deepEqual(t.avisos, []);
+});
+
+test('el rótulo de cada aporte sale del encabezado de la hoja, no del código', () => {
+  const t = normalizarTablero(CRUDO, { ahora: AHORA });
+  assert.deepEqual(t.socios[0].pagos.map(p => p.etiqueta), [
+    'Escritura dic-2024', 'Compromiso jun-2025', 'Adicional jul-2025', 'Compromiso dic-2025'
+  ]);
+});
+
+test('un encabezado de aporte en blanco cae a un rótulo genérico, no a «undefined»', () => {
+  const sinRotulos = {
+    ...CRUDO,
+    Socios: [['Socio', 'Participación', '', '', '  ', '', 'Total aportado'], CRUDO.Socios[1]]
+  };
+  const t = normalizarTablero(sinRotulos, { ahora: AHORA });
+  assert.deepEqual(t.socios[0].pagos.map(p => p.etiqueta),
+    ['Aporte 1', 'Aporte 2', 'Aporte 3', 'Aporte 4']);
+});
+
+test('la participación pasa por numero: una celda ilegible queda en null y avisa', () => {
+  const roto = {
+    ...CRUDO,
+    Socios: [CRUDO.Socios[0], ['Sociedad Primera S.A.S.', '#REF!', '1', '1', '1', '1', '4']]
+  };
+  const t = normalizarTablero(roto, { ahora: AHORA });
+  assert.equal(t.socios[0].participacion, null);
+  assert.notEqual(t.socios[0].participacion, 0);
+  const aviso = t.avisos.find(a => a.pestana === 'Socios' && a.columna === 'Participación');
+  assert.equal(aviso.fila, 2);
+  assert.equal(aviso.valor, '#REF!');
+});
+
+test('un total ilegible avisa con el nombre de su columna y deja el número en null', () => {
+  const roto = {
+    ...CRUDO,
+    Socios: [CRUDO.Socios[0], ['Sociedad Primera S.A.S.', 0.5, '1', '1', '1', '1', 'pendiente']]
+  };
+  const t = normalizarTablero(roto, { ahora: AHORA });
+  assert.equal(t.socios[0].total, null);
+  const aviso = t.avisos.find(a => a.pestana === 'Socios' && a.columna === 'Total aportado');
+  assert.equal(aviso.tipo, 'ilegible');
+  assert.equal(aviso.valor, 'pendiente');
+});
+
+test('un aporte ilegible avisa por el rótulo de la hoja y no borra al socio', () => {
+  const roto = {
+    ...CRUDO,
+    Socios: [CRUDO.Socios[0], ['Sociedad Primera S.A.S.', 0.5, '100000000', '1.5', '1', '1', '4']]
+  };
+  const t = normalizarTablero(roto, { ahora: AHORA });
+  assert.equal(t.socios.length, 1, 'el socio sigue en la tabla aunque una celda no se lea');
+  assert.equal(t.socios[0].pagos[1].valor, null);
+  assert.equal(t.socios[0].pagos[0].valor, 100000000, 'las celdas sanas de la fila no se pierden');
+  const aviso = t.avisos.find(a => a.pestana === 'Socios');
+  assert.equal(aviso.columna, 'Compromiso jun-2025');
+});
+
+test('una fila de socio en blanco no genera seis avisos: no hay nada que revisar', () => {
+  const conBlanco = { ...CRUDO, Socios: [...CRUDO.Socios, ['', '', '', '', '', '', ''], ['   ']] };
+  const t = normalizarTablero(conBlanco, { ahora: AHORA });
+  assert.equal(t.socios.length, 2);
+  assert.deepEqual(t.avisos, []);
+});
+
+test('un cero real en un aporte sigue siendo cero, no null', () => {
+  const enCero = {
+    ...CRUDO,
+    Socios: [CRUDO.Socios[0], ['Sociedad Primera S.A.S.', 0.5, 0, '1', '1', '1', '3']]
+  };
+  const t = normalizarTablero(enCero, { ahora: AHORA });
+  assert.equal(t.socios[0].pagos[0].valor, 0);
+  assert.deepEqual(t.avisos, []);
+});
+
+test('la pestaña de socios vacía avisa como las demás', () => {
+  const t = normalizarTablero({ ...CRUDO, Socios: [CRUDO.Socios[0]] }, { ahora: AHORA });
+  assert.deepEqual(t.socios, []);
+  const vacias = t.avisos.filter(a => a.tipo === 'pestana-vacia').map(a => a.pestana);
+  assert.deepEqual(vacias, ['Socios']);
+  assert.equal(t.cartera.length, 2, 'y no tumba a las otras pestañas');
+});
+
+test('el nombre del socio llega crudo: escaparlo es tarea de la vista', () => {
+  const malicioso = {
+    ...CRUDO,
+    Socios: [CRUDO.Socios[0], ['<img src=x onerror=alert(1)>', 0.5, '1', '1', '1', '1', '4']]
+  };
+  const t = normalizarTablero(malicioso, { ahora: AHORA });
+  assert.equal(t.socios[0].nombre, '<img src=x onerror=alert(1)>');
 });

@@ -1,5 +1,5 @@
-// Los tres paneles del tablero de socios: las seis cifras de arriba, la ficha
-// de un lote y el panel de gastos.
+// Los paneles del tablero de socios: las seis cifras de arriba, la ficha de un
+// lote, el panel de gastos y la tabla de aportes de los socios.
 //
 // TODO lo de este archivo trabaja sobre la vista que ya armó
 // `construirVistaTablero` (assets/js/tablero.js), no sobre el JSON crudo del
@@ -12,7 +12,7 @@
 // mismo dato que pinta el plano y la vitrina pública: números y estados
 // validados por `validarInventario`, sin texto libre de nadie.
 
-import { pesos, metros } from './formato.js';
+import { pesos, metros, pesosConSigno, porcentaje } from './formato.js';
 import { validarInventario, precioDeLote } from './inventario.js';
 
 // Los rótulos largos vienen del nombre de la fila en la hoja («Disponible»,
@@ -244,5 +244,157 @@ export function construirVistaGastos(egresosPorCategoria) {
       : pesos(total),
     incompleto: filasSinLeer > 0,
     filasSinLeer
+  };
+}
+
+// ---- la tabla de socios -------------------------------------------------
+
+// Un total de columna sobre celdas que pudieron no leerse.
+//
+// Mismo trato que el total de una categoría de gastos: la marca viaja PEGADA a
+// la cifra, así ninguna plantilla puede mostrar el número sin mostrar que está
+// incompleto. Sin ninguna celda legible no hay $0 que enseñar —eso diría que
+// nadie puso nada— sino raya.
+function sumarColumna(valores) {
+  const legibles = valores.filter(v => typeof v === 'number' && Number.isFinite(v));
+  const sinLeer = valores.length - legibles.length;
+  const total = legibles.reduce((t, v) => t + v, 0);
+  const cifra = pesos(total);
+  return {
+    total: legibles.length === 0 ? null : total,
+    sinLeer,
+    incompleto: sinLeer > 0,
+    texto: legibles.length === 0
+      ? '—'
+      : (sinLeer > 0 ? `${cifra} + ${sinLeer} ${sinLeer === 1 ? 'socio' : 'socios'} sin leer` : cifra)
+  };
+}
+
+// Los tres estados de una diferencia, en un solo lugar para que la tabla y su
+// pie no puedan discrepar. El valor sale a un atributo `data-` del HTML, así
+// que es de este vocabulario cerrado y nunca de la hoja.
+function estadoDiferencia(diferencia) {
+  if (diferencia === null) return 'sin-dato';
+  if (diferencia === 0) return 'exacto';
+  return diferencia > 0 ? 'de-mas' : 'de-menos';
+}
+
+// De mayor a menor aporte. El socio cuyo total no se pudo leer se va al final:
+// no se puede comparar contra nadie, y ponerlo arriba o abajo por accidente le
+// inventaría un lugar en el orden.
+function porAporte(a, b) {
+  const ha = typeof a.total === 'number';
+  const hb = typeof b.total === 'number';
+  if (ha && hb) return b.total - a.total;
+  if (ha) return -1;
+  if (hb) return 1;
+  return 0;
+}
+
+/**
+ * Arma la tabla de socios: quién puso cuánto por la tierra y, al lado, cuánto
+ * se aparta de lo que le correspondía por su participación.
+ *
+ * @param socios lo que trae `construirVistaTablero().socios` (texto YA escapado)
+ *
+ * La diferencia es el punto de la pestaña: `total - participación × total de la
+ * tierra`. Con signo, para que se lea de un vistazo quién puso de más y quién
+ * de menos sin tener que calcular nada.
+ *
+ * Y tiene TRES estados, no dos:
+ *   - un número (positivo o negativo) -> se muestra con su signo y su color.
+ *   - cero de verdad -> «$0» en gris. Ese socio está exacto.
+ *   - no se pudo calcular -> raya. Es distinto de cero y no puede parecerse:
+ *     decirle «$0» a un socio es afirmarle que está a paz y salvo.
+ *
+ * El tercer caso incluye algo que no es evidente: si el total de UN socio no se
+ * pudo leer, el total de la tierra queda corto, y entonces la parte que le
+ * corresponde a CADA UNO sale mal. Con la base dañada no se calcula ninguna
+ * diferencia — una cifra sobre una base equivocada es una afirmación falsa
+ * sobre la plata de un socio, y esas no se imprimen.
+ */
+export function construirVistaSocios(socios) {
+  const filas = socios ?? [];
+
+  if (filas.length === 0) {
+    return {
+      socios: [], etiquetasPagos: [], totalesPagos: [],
+      total: null, totalTexto: '—', incompleto: false, sinLeer: 0,
+      participacionTotal: null, participacionTotalTexto: '—', participacionCuadra: true,
+      diferenciaTotal: null, diferenciaTotalTexto: '—', diferenciaTotalEstado: 'sin-dato',
+      baseConfiable: false
+    };
+  }
+
+  // Los rótulos de las cuatro rondas los pone la hoja en su encabezado y el
+  // worker se los cuelga a cada socio. Se toman de la primera fila que los
+  // traiga: son los mismos para todos.
+  const etiquetasPagos = (filas.find(s => s.pagos?.length)?.pagos ?? []).map(p => p.etiqueta);
+
+  const general = sumarColumna(filas.map(s => s.total));
+  const totalesPagos = etiquetasPagos.map((_, j) =>
+    sumarColumna(filas.map(s => s.pagos?.[j]?.valor))
+  );
+
+  const participaciones = filas
+    .map(s => s.participacion)
+    .filter(p => typeof p === 'number' && Number.isFinite(p));
+  const participacionTotal = participaciones.length === filas.length
+    ? participaciones.reduce((t, p) => t + p, 0)
+    : null;
+
+  // La base sirve solo si están los seis totales. `general.total` en null es el
+  // caso extremo (ninguno legible) y también queda por fuera.
+  const baseConfiable = !general.incompleto && typeof general.total === 'number';
+
+  const conDiferencia = [...filas].sort(porAporte).map(s => {
+    const puedeCalcular = baseConfiable &&
+      typeof s.participacion === 'number' && typeof s.total === 'number';
+    // Se redondea al peso antes de comparar: 0,33 × 3.600.000.000 deja ruido
+    // de coma flotante y sin redondear un socio exacto salía con una
+    // diferencia de fracciones de peso, que en pantalla se ve como $0 pero
+    // pinta del color de «puso de más».
+    const esperado = puedeCalcular ? Math.round(s.participacion * general.total) : null;
+    const diferencia = puedeCalcular ? Math.round(s.total - s.participacion * general.total) : null;
+    return {
+      ...s,
+      esperado,
+      esperadoTexto: esperado === null ? '—' : pesos(esperado),
+      diferencia,
+      diferenciaTexto: diferencia === null ? '—' : pesosConSigno(diferencia),
+      diferenciaEstado: estadoDiferencia(diferencia)
+    };
+  });
+
+  // La suma de las diferencias. Con las participaciones cuadradas en 100 % da
+  // cero, y ese cero es la comprobación de que la columna está bien calculada.
+  // Si NO da cero, lo que está mal es el reparto de la hoja, y la fila del pie
+  // es donde se ve. Basta con que una diferencia no se haya podido calcular
+  // para que el pie no pueda afirmar nada: ahí va raya.
+  const faltaAlguna = conDiferencia.some(s => s.diferencia === null);
+  const diferenciaTotal = faltaAlguna
+    ? null
+    : conDiferencia.reduce((t, s) => t + s.diferencia, 0);
+
+  return {
+    socios: conDiferencia,
+    diferenciaTotal,
+    diferenciaTotalTexto: diferenciaTotal === null ? '—' : pesosConSigno(diferenciaTotal),
+    diferenciaTotalEstado: estadoDiferencia(diferenciaTotal),
+    etiquetasPagos,
+    totalesPagos,
+    total: general.total,
+    totalTexto: general.texto,
+    incompleto: general.incompleto,
+    sinLeer: general.sinLeer,
+    participacionTotal,
+    participacionTotalTexto: participacionTotal === null ? '—' : porcentaje(participacionTotal),
+    // Las participaciones tienen que sumar el 100 %. Si no suman, la parte que
+    // le toca a cada uno está mal repartida en la hoja y hay que ir a mirarla.
+    // Se compara con holgura de un peso sobre el total para no pelear con la
+    // coma flotante.
+    participacionCuadra: participacionTotal !== null &&
+      Math.abs(participacionTotal - 1) < 1e-9,
+    baseConfiable
   };
 }

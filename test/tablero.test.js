@@ -406,3 +406,86 @@ test('una categoría marcada con HTML en el nombre casa igual y sale escapada', 
   assert.equal(g.incompleto, true);
   assert.doesNotMatch(g.categoria, /<b>/);
 });
+
+// --- «Tablero Socios»: escapar en el borde y formatear las cifras ---------
+// Los socios de estos datos son inventados. Los nombres reales viven en la
+// hoja y no entran al repositorio (ver test/secretos.test.js).
+
+const CON_SOCIOS = {
+  ...TABLERO,
+  socios: [
+    {
+      nombre: 'Sociedad Primera S.A.S.',
+      participacion: 0.33,
+      pagos: [
+        { etiqueta: 'Escritura dic-2024', valor: 400000000 },
+        { etiqueta: 'Compromiso jun-2025', valor: 165000000 },
+        { etiqueta: 'Adicional jul-2025', valor: 100000000 },
+        { etiqueta: 'Compromiso dic-2025', valor: 528000000 }
+      ],
+      total: 1193000000
+    }
+  ]
+};
+
+test('la participación de la hoja llega al front en porcentaje, no en fracción', () => {
+  const s = construirVistaTablero(CON_SOCIOS, AHORA).socios[0];
+  assert.equal(s.participacionTexto, '33 %');
+  assert.notEqual(s.participacionTexto, '0.33');
+  assert.equal(s.participacion, 0.33, 'el número crudo sigue disponible para calcular');
+});
+
+test('los aportes y el total del socio salen formateados en pesos', () => {
+  const s = construirVistaTablero(CON_SOCIOS, AHORA).socios[0];
+  assert.equal(s.totalTexto, '$1.193.000.000');
+  assert.equal(s.pagos[0].valorTexto, '$400.000.000');
+  assert.equal(s.pagos[0].etiqueta, 'Escritura dic-2024');
+});
+
+test('un aporte en null sale como raya y jamás como $0', () => {
+  const roto = {
+    ...CON_SOCIOS,
+    socios: [{ ...CON_SOCIOS.socios[0], total: null, pagos: [{ etiqueta: 'Escritura dic-2024', valor: null }] }]
+  };
+  const s = construirVistaTablero(roto, AHORA).socios[0];
+  assert.equal(s.totalTexto, '—');
+  assert.equal(s.pagos[0].valorTexto, '—');
+  assert.notEqual(s.totalTexto, '$0');
+});
+
+test('un aporte de $0 real sí sale como $0', () => {
+  const enCero = {
+    ...CON_SOCIOS,
+    socios: [{ ...CON_SOCIOS.socios[0], pagos: [{ etiqueta: 'Escritura dic-2024', valor: 0 }] }]
+  };
+  const s = construirVistaTablero(enCero, AHORA).socios[0];
+  assert.equal(s.pagos[0].valorTexto, '$0');
+});
+
+test('una participación ilegible sale como raya, no como 0 %', () => {
+  const roto = { ...CON_SOCIOS, socios: [{ ...CON_SOCIOS.socios[0], participacion: null }] };
+  const s = construirVistaTablero(roto, AHORA).socios[0];
+  assert.equal(s.participacionTexto, '—');
+  assert.notEqual(s.participacionTexto, '0 %');
+});
+
+test('el nombre del socio y el rótulo del aporte salen escapados, no interpretados', () => {
+  const malicioso = {
+    ...CON_SOCIOS,
+    socios: [{
+      ...CON_SOCIOS.socios[0],
+      nombre: '<img src=x onerror="window.__xss=1">',
+      pagos: [{ etiqueta: '"><svg onload=alert(1)>', valor: 1000 }]
+    }]
+  };
+  const s = construirVistaTablero(malicioso, AHORA).socios[0];
+  assert.doesNotMatch(s.nombre, /<img/);
+  assert.match(s.nombre, /&lt;img/);
+  assert.match(s.nombre, /&quot;/);
+  assert.doesNotMatch(s.pagos[0].etiqueta, /<svg/);
+  assert.match(s.pagos[0].etiqueta, /&quot;&gt;&lt;svg/);
+});
+
+test('sin pestaña de socios el tablero devuelve una lista vacía, no revienta', () => {
+  assert.deepEqual(construirVistaTablero(TABLERO, AHORA).socios, []);
+});

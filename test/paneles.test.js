@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 
 import { construirVistaTablero } from '../assets/js/tablero.js';
 import {
-  construirCifras, construirVistaLotes, construirVistaGastos,
+  construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   mencionaVencido, porcentajePagado
 } from '../assets/js/paneles.js';
 
@@ -422,4 +422,234 @@ test('la promesa aparece en la ficha cuando la hoja la trae, y no cuando no', ()
   const g = construirVistaLotes(vistaDe(sin), INV).fichas.find(x => x.n === TABLERO.cartera[0].lote);
   assert.equal(g.filas.some(x => x.etiqueta === 'Promesa'), false,
     'sin fecha no debe quedar una fila «Promesa» vacía');
+});
+
+
+// ---- la tabla de socios -------------------------------------------------
+//
+// Seis socios inventados con la misma FORMA que la hoja real: dos al 33 %, dos
+// al 11 % y dos al 6 %, y un total de la tierra que reparten entre todos. Ni
+// los nombres ni las cifras son los de verdad — no entran al repositorio, ver
+// test/secretos.test.js.
+//
+// Uno puso cinco millones de más y otro cinco millones de menos; los otros
+// cuatro están exactos. Es el caso que la pestaña existe para mostrar.
+
+const pagos = (a, b, c, d) => [
+  { etiqueta: 'Escritura dic-2024', valor: a },
+  { etiqueta: 'Compromiso jun-2025', valor: b },
+  { etiqueta: 'Adicional jul-2025', valor: c },
+  { etiqueta: 'Compromiso dic-2025', valor: d }
+];
+
+const SOCIOS = [
+  { nombre: 'Sociedad Primera S.A.S.', participacion: 0.33, pagos: pagos(264000000, 132000000, 66000000, 335000000), total: 797000000 },
+  { nombre: 'Sociedad Segunda S.A.S.', participacion: 0.33, pagos: pagos(264000000, 132000000, 66000000, 330000000), total: 792000000 },
+  { nombre: 'Socia Tercera', participacion: 0.11, pagos: pagos(88000000, 44000000, 22000000, 110000000), total: 264000000 },
+  { nombre: 'Socio Cuarto', participacion: 0.11, pagos: pagos(88000000, 44000000, 22000000, 110000000), total: 264000000 },
+  { nombre: 'Socio Quinto', participacion: 0.06, pagos: pagos(48000000, 24000000, 12000000, 60000000), total: 144000000 },
+  { nombre: 'Socio Sexto', participacion: 0.06, pagos: pagos(48000000, 24000000, 12000000, 55000000), total: 139000000 }
+];
+
+const CON_SOCIOS = { ...TABLERO, socios: SOCIOS };
+const sociosDe = (t = CON_SOCIOS) => construirVistaSocios(vistaDe(t).socios);
+
+test('los socios van de mayor a menor aporte', () => {
+  const s = sociosDe();
+  assert.equal(s.socios.length, 6);
+  assert.deepEqual(s.socios.map(x => x.total),
+    [797000000, 792000000, 264000000, 264000000, 144000000, 139000000]);
+});
+
+test('el total del pie suma los seis aportes', () => {
+  const s = sociosDe();
+  assert.equal(s.total, 2400000000);
+  assert.equal(s.totalTexto, '$2.400.000.000');
+  assert.equal(s.incompleto, false);
+});
+
+test('el pie también suma cada ronda de aportes por separado', () => {
+  const s = sociosDe();
+  assert.deepEqual(s.etiquetasPagos,
+    ['Escritura dic-2024', 'Compromiso jun-2025', 'Adicional jul-2025', 'Compromiso dic-2025']);
+  assert.deepEqual(s.totalesPagos.map(t => t.total),
+    [800000000, 400000000, 200000000, 1000000000]);
+  assert.equal(s.totalesPagos[0].texto, '$800.000.000');
+});
+
+// El hallazgo de la pestaña: quién se apartó de lo que le tocaba por su parte.
+test('la diferencia contra la participación sale con signo y solo donde la hay', () => {
+  const s = sociosDe();
+  const por = Object.fromEntries(s.socios.map(x => [x.nombre, x]));
+
+  assert.equal(por['Sociedad Primera S.A.S.'].diferencia, 5000000);
+  assert.equal(por['Sociedad Primera S.A.S.'].diferenciaTexto, '+$5.000.000');
+  assert.equal(por['Sociedad Primera S.A.S.'].diferenciaEstado, 'de-mas');
+
+  assert.equal(por['Socio Sexto'].diferencia, -5000000);
+  assert.equal(por['Socio Sexto'].diferenciaTexto, '-$5.000.000');
+  assert.equal(por['Socio Sexto'].diferenciaEstado, 'de-menos');
+
+  for (const nombre of ['Sociedad Segunda S.A.S.', 'Socia Tercera', 'Socio Cuarto', 'Socio Quinto']) {
+    assert.equal(por[nombre].diferencia, 0, `${nombre} debería estar exacto`);
+    assert.equal(por[nombre].diferenciaTexto, '$0');
+    assert.equal(por[nombre].diferenciaEstado, 'exacto');
+  }
+});
+
+test('lo que le corresponde a cada uno se calcula, no se copia de la hoja', () => {
+  const s = sociosDe();
+  const primera = s.socios.find(x => x.nombre === 'Sociedad Primera S.A.S.');
+  // 33 % del total de la tierra de estos datos de juguete.
+  assert.equal(primera.esperado, 792000000);
+  assert.equal(primera.esperadoTexto, '$792.000.000');
+});
+
+test('las diferencias suman cero cuando las participaciones cuadran en 100 %', () => {
+  const s = sociosDe();
+  assert.equal(s.participacionCuadra, true);
+  assert.equal(s.participacionTotalTexto, '100 %');
+  assert.equal(s.diferenciaTotal, 0);
+  assert.equal(s.diferenciaTotalEstado, 'exacto');
+});
+
+test('unas participaciones que no suman 100 % quedan marcadas', () => {
+  const mal = { ...CON_SOCIOS, socios: SOCIOS.map(x => ({ ...x, participacion: 0.1 })) };
+  const s = sociosDe(mal);
+  assert.equal(s.participacionCuadra, false);
+  assert.equal(s.participacionTotalTexto, '60 %');
+});
+
+test('el ruido de la coma flotante no le inventa una diferencia al que está exacto', () => {
+  // 0,33 por el total no da un entero redondo en binario. Sin redondear al
+  // peso, un socio exacto salía con una diferencia de fracciones y se pintaba
+  // del color de «puso de más» mostrando «$0».
+  const s = sociosDe();
+  const segunda = s.socios.find(x => x.nombre === 'Sociedad Segunda S.A.S.');
+  assert.equal(segunda.diferencia, 0);
+  assert.equal(segunda.diferenciaEstado, 'exacto');
+});
+
+test('el socio con un pago en null lo muestra como raya y no como $0', () => {
+  const roto = {
+    ...CON_SOCIOS,
+    socios: [{ ...SOCIOS[0], pagos: pagos(264000000, null, 66000000, 335000000) }, ...SOCIOS.slice(1)]
+  };
+  const s = sociosDe(roto);
+  const primera = s.socios.find(x => x.nombre === 'Sociedad Primera S.A.S.');
+  assert.equal(primera.pagos[1].valorTexto, '—');
+  assert.notEqual(primera.pagos[1].valorTexto, '$0');
+  // El total de ESA ronda queda marcado, con la marca pegada a la cifra.
+  assert.equal(s.totalesPagos[1].incompleto, true);
+  assert.match(s.totalesPagos[1].texto, /sin leer/i);
+  assert.notEqual(s.totalesPagos[1].texto, '$400.000.000');
+  // Y el total aportado, que la hoja trae en su propia columna, sigue completo.
+  assert.equal(s.incompleto, false);
+  assert.equal(s.totalTexto, '$2.400.000.000');
+});
+
+test('con un total sin leer no se calcula NINGUNA diferencia: la base quedó corta', () => {
+  const roto = { ...CON_SOCIOS, socios: [{ ...SOCIOS[0], total: null }, ...SOCIOS.slice(1)] };
+  const s = sociosDe(roto);
+  assert.equal(s.baseConfiable, false);
+  for (const x of s.socios) {
+    assert.equal(x.diferencia, null, `${x.nombre} no puede tener diferencia sobre una base rota`);
+    assert.equal(x.diferenciaTexto, '—');
+    assert.equal(x.diferenciaEstado, 'sin-dato');
+    assert.notEqual(x.diferenciaTexto, '$0', 'un «no se pudo calcular» no puede leerse como «está exacto»');
+  }
+  assert.equal(s.diferenciaTotalTexto, '—');
+});
+
+test('el total del pie con un socio sin leer viaja marcado, pegado a la cifra', () => {
+  const roto = { ...CON_SOCIOS, socios: [{ ...SOCIOS[0], total: null }, ...SOCIOS.slice(1)] };
+  const s = sociosDe(roto);
+  assert.equal(s.incompleto, true);
+  assert.equal(s.sinLeer, 1);
+  assert.match(s.totalTexto, /1 socio sin leer/i);
+  assert.notEqual(s.totalTexto, '$1.603.000.000');
+});
+
+test('dos socios sin leer se cuentan en plural', () => {
+  const roto = {
+    ...CON_SOCIOS,
+    socios: [{ ...SOCIOS[0], total: null }, { ...SOCIOS[1], total: null }, ...SOCIOS.slice(2)]
+  };
+  const s = sociosDe(roto);
+  assert.equal(s.sinLeer, 2);
+  assert.match(s.totalTexto, /2 socios sin leer/i);
+});
+
+test('el socio cuyo total no se pudo leer se va al final del orden', () => {
+  const roto = { ...CON_SOCIOS, socios: [{ ...SOCIOS[0], total: null }, ...SOCIOS.slice(1)] };
+  const s = sociosDe(roto);
+  assert.equal(s.socios.at(-1).nombre, 'Sociedad Primera S.A.S.');
+  assert.equal(s.socios[0].total, 792000000);
+});
+
+test('una participación ilegible deja sin diferencia a ese socio y no a los demás', () => {
+  const roto = { ...CON_SOCIOS, socios: [{ ...SOCIOS[0], participacion: null }, ...SOCIOS.slice(1)] };
+  const s = sociosDe(roto);
+  const primera = s.socios.find(x => x.nombre === 'Sociedad Primera S.A.S.');
+  assert.equal(primera.diferenciaEstado, 'sin-dato');
+  assert.equal(primera.participacionTexto, '—');
+  const segunda = s.socios.find(x => x.nombre === 'Sociedad Segunda S.A.S.');
+  assert.equal(segunda.diferenciaEstado, 'exacto', 'lo de un socio no puede tumbar el cálculo del otro');
+});
+
+test('sin ningún total legible el pie muestra raya, no $0', () => {
+  const roto = { ...CON_SOCIOS, socios: SOCIOS.map(x => ({ ...x, total: null })) };
+  const s = sociosDe(roto);
+  assert.equal(s.total, null);
+  assert.equal(s.totalTexto, '—');
+  assert.notEqual(s.totalTexto, '$0');
+});
+
+test('la pestaña de socios vacía no inventa un cero', () => {
+  const s = sociosDe({ ...TABLERO, socios: [] });
+  assert.deepEqual(s.socios, []);
+  assert.equal(s.total, null);
+  assert.equal(s.totalTexto, '—');
+  assert.equal(s.diferenciaTotalTexto, '—');
+});
+
+test('sin argumento la tabla de socios tampoco revienta ni inventa un cero', () => {
+  const s = construirVistaSocios(undefined);
+  assert.deepEqual(s.socios, []);
+  assert.equal(s.totalTexto, '—');
+});
+
+test('un nombre de socio con HTML llega a la tabla escapado, no interpretado', () => {
+  const malicioso = {
+    ...CON_SOCIOS,
+    socios: [{ ...SOCIOS[0], nombre: `<img src=x onerror="window.__xss=1"> "comillas"` }, ...SOCIOS.slice(1)]
+  };
+  const s = sociosDe(malicioso);
+  const atacante = s.socios.find(x => /img/.test(x.nombre));
+  assert.doesNotMatch(atacante.nombre, /<img/);
+  assert.match(atacante.nombre, /&lt;img/);
+  assert.match(atacante.nombre, /&quot;/);
+});
+
+test('ningún texto de la tabla de socios sale con HTML crudo', () => {
+  const CARGA = `<img src=x onerror=alert(1)>'"`;
+  const malicioso = {
+    ...CON_SOCIOS,
+    socios: [{ nombre: CARGA, participacion: 0.5, pagos: [{ etiqueta: CARGA, valor: 1 }], total: 1 }]
+  };
+  const s = sociosDe(malicioso);
+  const textos = [
+    ...Object.values(s.socios[0]).filter(x => typeof x === 'string'),
+    ...s.socios[0].pagos.flatMap(p => Object.values(p).filter(x => typeof x === 'string')),
+    ...s.etiquetasPagos
+  ];
+  assert.ok(textos.length > 0);
+  for (const t of textos) assert.doesNotMatch(t, /<img|<svg|<script/, `salió sin escapar: ${t}`);
+});
+
+test('el estado de la diferencia sale de un vocabulario cerrado, apto para un atributo', () => {
+  const s = sociosDe();
+  const permitidos = new Set(['exacto', 'de-mas', 'de-menos', 'sin-dato']);
+  for (const x of s.socios) assert.ok(permitidos.has(x.diferenciaEstado), x.diferenciaEstado);
+  assert.ok(permitidos.has(s.diferenciaTotalEstado));
 });
