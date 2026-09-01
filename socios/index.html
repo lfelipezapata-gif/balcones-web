@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Balcones — Tablero de socios</title>
+<link rel="stylesheet" href="../assets/css/estilos.css">
+<link rel="icon" href="../img/favicon-32.png" sizes="32x32">
+<script src="https://accounts.google.com/gsi/client" async></script>
+</head>
+<body class="tablero">
+
+<header>
+  <h1>Balcones — Tablero de socios</h1>
+  <p id="frescura" class="frescura"></p>
+</header>
+
+<section id="entrada">
+  <p>Entrá con la cuenta de Google con la que te compartieron el tablero.</p>
+  <div id="boton-google"></div>
+  <p id="error" class="error" hidden></p>
+</section>
+
+<main id="contenido" hidden>
+  <p id="alerta" class="alerta" hidden></p>
+  <section id="resumen" class="resumen"></section>
+  <section><h2>Entra — la cartera</h2><div id="cartera"></div></section>
+  <section><h2>Sale — la obra</h2><div id="egresos"></div></section>
+  <section id="avisos"></section>
+</main>
+
+<script type="module">
+import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js';
+import { construirVistaTablero } from '../assets/js/tablero.js';
+
+const $ = (id) => document.getElementById(id);
+
+function mostrarError(mensaje) {
+  $('error').textContent = mensaje;
+  $('error').hidden = false;
+  $('entrada').hidden = false;
+  $('contenido').hidden = true;
+}
+
+async function cargar(credencial) {
+  let r;
+  try {
+    r = await fetch(API_TABLERO, { headers: { authorization: `Bearer ${credencial}` } });
+  } catch {
+    return mostrarError('No hay conexión con el servidor del tablero.');
+  }
+  let cuerpo;
+  try {
+    cuerpo = await r.json();
+  } catch {
+    // Cloudflare (u otra capa de borde) puede devolver una página de error
+    // que no es JSON en cortes de infraestructura (502/522/523, un WAF).
+    // Sin este try/catch esa excepción quedaba como unhandled rejection y
+    // la pantalla de entrada se quedaba muda, sin ningún mensaje.
+    return mostrarError('El servidor del tablero respondió con algo que no se pudo leer. Volvé a intentar en un momento.');
+  }
+  if (!r.ok) return mostrarError(cuerpo.error ?? 'No se pudo cargar el tablero.');
+
+  const v = construirVistaTablero(cuerpo, new Date());
+  $('entrada').hidden = true;
+  $('contenido').hidden = false;
+  $('frescura').textContent = v.frescura;
+
+  if (v.alerta) { $('alerta').textContent = v.alerta; $('alerta').hidden = false; }
+
+  $('resumen').innerHTML = v.resumen.map(r => `
+    <div class="cifra"><span>${r.etiqueta}</span><strong>${r.texto}</strong></div>`).join('');
+
+  $('cartera').innerHTML = v.cartera.map(c => `
+    <details class="fila">
+      <summary>
+        <b>Lote ${c.lote}</b> · ${c.comprador}
+        <span class="saldo">${c.saldoTexto}</span>
+      </summary>
+      <p>Precio ${c.precioTexto} · Abonado ${c.abonadoTexto} · ${c.estado}</p>
+      <p>Próxima cuota: ${c.proximaCuotaTexto}</p>
+      <ul>${c.abonos.map(a => `<li>${a.fecha} — ${a.valorTexto} ${a.medio}</li>`).join('')}</ul>
+    </details>`).join('');
+
+  $('egresos').innerHTML = v.egresosPorCategoria.map(g => `
+    <details class="fila">
+      <summary><b>${g.categoria}</b><span class="saldo${g.incompleto ? ' incompleto' : ''}">${g.totalTexto}</span></summary>
+      <ul>${g.movimientos.map(m => `<li>${m.fecha} — ${m.concepto} — ${m.valorTexto}</li>`).join('')}</ul>
+    </details>`).join('');
+
+  $('avisos').innerHTML = v.avisos.length
+    ? '<h2>Revisar</h2><ul>' + v.avisos.map(a => `<li>${a}</li>`).join('') + '</ul>'
+    : '';
+}
+
+window.onload = () => {
+  // Si el script de accounts.google.com no cargó (sin conexión al momento
+  // de abrir la página, red bloqueada, origen no autorizado), "google" no
+  // existe: sin este chequeo era un ReferenceError silencioso y el botón
+  // de entrar no aparecía nunca, sin ninguna explicación en pantalla.
+  if (typeof google === 'undefined' || !google.accounts?.id) {
+    return mostrarError('No se pudo cargar el inicio de sesión de Google. Revisá tu conexión a internet y recargá la página.');
+  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: (r) => cargar(r.credential)
+  });
+  google.accounts.id.renderButton($('boton-google'), { theme: 'outline', size: 'large', locale: 'es' });
+};
+</script>
+
+</body>
+</html>

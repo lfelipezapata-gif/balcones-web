@@ -1,0 +1,20 @@
+{
+  "precioM2": 110000,
+  "actualizado": "2026-08-31",
+  "lotes": [
+    { "n": 1,  "sector": 1, "area": 2754, "estado": "vendido" },
+    { "n": 2,  "sector": 1, "area": 2746, "estado": "especie" },
+    { "n": 3,  "sector": 1, "area": 2761, "estado": "vendido" },
+    { "n": 4,  "sector": 1, "area": 2752, "estado": "vendido" },
+    { "n": 5,  "sector": 1, "area": 2200, "estado": "vendido" },
+    { "n": 6,  "sector": 1, "area": 2140, "estado": "disponible" },
+    { "n": 7,  "sector": 1, "area": 2129, "estado": "disponible" },
+    { "n": 8,  "sector": 1, "area": 2228, "estado": "disponible" },
+    { "n": 9,  "sector": 1, "area": 2205, "estado": "disponible" },
+    { "n": 10, "sector": 1, "area": 2040, "estado": "vendido" },
+    { "n": 11, "sector": 1, "area": 2487, "estado": "disponible" },
+    { "n": 12, "sector": 2, "area": 2760, "estado": "disponible" },
+    { "n": 13, "sector": 2, "area": 2719, "estado": "disponible" },
+    { "n": 14, "sector": 2, "area": 3000, "estado": "vendido" }
+  ]
+}

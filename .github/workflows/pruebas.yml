@@ -1,0 +1,19 @@
+name: Pruebas
+on: [push, pull_request]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pruebas del sitio
+        run: npm test
+      - name: Instalar dependencias del worker
+        run: npm install
+        working-directory: worker
+      - name: Pruebas del worker
+        run: npm test
+        working-directory: worker

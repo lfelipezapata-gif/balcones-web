@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Condominio Balcones — Santa Rosa de Osos</title>
+<meta name="description" content="Lotes de casa-finca en Santa Rosa de Osos. Escritura individual, agua potable del acueducto urbano, energía y vías.">
+<link rel="stylesheet" href="assets/css/estilos.css">
+<link rel="icon" href="img/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+</head>
+<body>
+
+<header class="portada">
+  <img class="logo" src="img/logo.png"
+       srcset="img/logo.png 1x, img/logo@2x.png 2x"
+       alt="Condominio Balcones">
+  <h1>Casas-finca en Santa Rosa de Osos</h1>
+  <p>Antioquia</p>
+  <img src="img/portada.jpg" alt="Render del proyecto terminado">
+  <p class="rotulo">Imagen de referencia del proyecto terminado</p>
+</header>
+
+<section id="disponibles">
+  <h2 id="titular"></h2>
+  <p id="subtitulo"></p>
+  <img src="img/mapa.jpg" alt="Mapa del loteo con los lotes disponibles en verde">
+  <div id="tarjetas" class="tarjetas"></div>
+</section>
+
+<section id="entrega">
+  <h2>Qué se entrega</h2>
+  <ul>
+    <li>Escritura individual, no en proindiviso</li>
+    <li>Agua potable del acueducto urbano</li>
+    <li>Energía</li>
+    <li>Vías internas</li>
+    <li>Cerramiento en barrera viva de eugenios</li>
+    <li>Portería</li>
+  </ul>
+</section>
+
+<section id="equipo">
+  <h2>Hecho por ingenieros y arquitectos</h2>
+  <p>El mismo equipo hace obra pública de acueducto, alcantarillado y vías,
+     edificios y el loteo San Julián.</p>
+</section>
+
+<footer>
+  <a class="boton" id="whatsapp"
+     href="https://wa.me/573203769226?text=%C2%A1Hola%21%20Quiero%20informaci%C3%B3n%20de%20Balcones.">
+     Escribir por WhatsApp</a>
+</footer>
+
+<script type="module">
+  import { construirVistaVitrina } from './assets/js/vitrina.js';
+
+  const inv = await (await fetch('data/lotes.json')).json();
+  const v = construirVistaVitrina(inv);
+
+  document.getElementById('titular').textContent = v.titular;
+  document.getElementById('subtitulo').textContent = v.subtitulo;
+  document.getElementById('tarjetas').innerHTML = v.tarjetas.map(t => `
+    <article class="tarjeta">
+      <h3>Lote ${t.n}</h3>
+      <p class="area">${t.areaTexto}</p>
+      <p class="precio">${t.precioTexto}</p>
+    </article>`).join('');
+</script>
+
+</body>
+</html>

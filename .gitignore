@@ -1,0 +1,11 @@
+node_modules/
+.env
+.dev.vars
+*.log
+.DS_Store
+credenciales-*.json
+
+# No versionado: trae el nombre del dueño, el correo real y los seis socios
+# con sus porcentajes. Se queda en disco para uso local, no viaja con el
+# repositorio público. Ver test/secretos.test.js.
+docs/

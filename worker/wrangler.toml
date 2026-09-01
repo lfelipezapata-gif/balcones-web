@@ -1,0 +1,8 @@
+name = "balcones-tablero"
+main = "src/index.js"
+compatibility_date = "2026-08-31"
+
+[vars]
+GOOGLE_CLIENT_ID = ""
+ID_HOJA_ESPEJO = ""
+ORIGEN_PERMITIDO = ""

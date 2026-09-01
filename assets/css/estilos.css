@@ -1,0 +1,68 @@
+:root {
+  --verde-marca: #02180c;  /* el fondo del logotipo, muestreado del original */
+  --verde: #2f6b3f;
+  --dorado: #c8a13e;
+  --tinta: #1c1c1c;
+  --papel: #faf8f4;
+  --borde: #e2ddd4;
+}
+.portada {
+  background: var(--verde-marca);
+  color: #f3efe4;
+  text-align: center;
+  padding-top: 1.5rem;
+}
+.portada .logo { width: 280px; max-width: 80%; height: auto; margin: 0 auto 1.25rem; }
+.portada h1 { color: var(--dorado); margin: 1.25rem 0 .25rem; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 17px/1.6 -apple-system, system-ui, sans-serif;
+  color: var(--tinta);
+  background: var(--papel);
+}
+h1, h2, h3 { line-height: 1.2; }
+section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 auto; }
+.portada img, #disponibles img { width: 100%; border-radius: 10px; display: block; }
+.rotulo { font-size: .8rem; color: #6b6b6b; margin: .4rem 0 1.5rem; }
+.tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.tarjeta { border: 1px solid var(--borde); border-radius: 10px; padding: 1rem; background: #fff; }
+.tarjeta h3 { margin: 0 0 .5rem; color: var(--verde); }
+.tarjeta .area { margin: 0; color: #555; }
+.tarjeta .precio { margin: .25rem 0 0; font-weight: 600; font-size: 1.15rem; }
+.boton {
+  display: block; text-align: center; text-decoration: none;
+  background: var(--verde); color: #fff; padding: 1rem;
+  border-radius: 10px; font-weight: 600;
+}
+@media (min-width: 700px) { body { font-size: 18px; } }
+
+.tablero .frescura { color: #6b6b6b; font-size: .9rem; margin: .25rem 0 0; }
+.tablero .alerta {
+  background: #fff4e0; border: 1px solid #e8c98a;
+  padding: .9rem; border-radius: 8px;
+}
+.tablero .error { color: #9b2c2c; font-weight: 600; }
+.resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; }
+.cifra {
+  border: 1px solid var(--borde); border-radius: 8px;
+  padding: .75rem; background: #fff; display: flex; flex-direction: column;
+}
+.cifra span { font-size: .8rem; color: #6b6b6b; }
+.cifra strong { font-size: 1.2rem; }
+.fila { border: 1px solid var(--borde); border-radius: 8px; padding: .75rem; background: #fff; margin-bottom: .5rem; }
+.fila summary { cursor: pointer; display: flex; justify-content: space-between; gap: .5rem; }
+.fila .saldo { font-weight: 600; white-space: nowrap; }
+/* Un total sumado sobre filas que no se pudieron leer. El texto ya lo dice
+   («+ 1 movimiento sin leer»); el color y el borde son para que no se lea como
+   una cifra normal de un vistazo. Se deja envolver: en 390 px no cabe en una
+   línea y nowrap lo sacaría de la pantalla. */
+.fila .saldo.incompleto {
+  white-space: normal;
+  text-align: right;
+  color: #8a5a00;
+  background: #fff4e0;
+  border: 1px solid #e8c98a;
+  border-radius: 6px;
+  padding: 0 .35rem;
+}
