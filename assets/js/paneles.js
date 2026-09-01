@@ -476,7 +476,12 @@ export function construirVistaGastos(egresosPorCategoria) {
 // desde el worker— cae en 'otro': la fila se muestra igual, con su concepto y
 // su cifra, sin signo forzado y sin realce. Una pestaña que se cae porque
 // apareció un tipo nuevo es peor que una que muestra una fila de más.
-const TIPOS_CAJA = new Set(['saldo', 'suma', 'resta', 'subtotal', 'brecha', 'nota']);
+//
+// `apertura` es el saldo con el que ARRANCA la cuenta, y es distinto de
+// `subtotal`, que es un corte en el medio. Se ven igual en pantalla, pero solo
+// la apertura sirve para comprobar que las entradas y las salidas dan el saldo
+// final — y la hoja llegó a usar `subtotal` para las dos cosas.
+const TIPOS_CAJA = new Set(['saldo', 'apertura', 'suma', 'resta', 'subtotal', 'brecha', 'nota']);
 
 // El tipo sale a un atributo `data-` del HTML. Por eso se traduce a este
 // vocabulario cerrado antes de salir: lo que llega de la hoja nunca entra a un
@@ -599,6 +604,51 @@ export function construirVistaCaja(caja) {
     );
   }
 
+  // La OTRA comprobación, y la única que aplica desde que la brecha salió del
+  // tablero (decisión del 31-ago-2026): el saldo de apertura más las entradas y
+  // las salidas tiene que dar el saldo con el que cierra la cuenta.
+  //
+  // La de arriba no la reemplaza: comprueba una ecuación distinta —saldo +
+  // movimientos = brecha— y quedó dormida al quitar la fila de brecha. Sin esta,
+  // la cifra más mirada del tablero pasó a no tener ninguna comprobación.
+  //
+  // Hace falta porque la pestaña «Tablero Caja» de la hoja se arma FILA POR FILA
+  // A MANO contra la hoja CAJA. Un movimiento que entra a CAJA y no se copia allá
+  // le deja al socio un saldo que sus propios movimientos no explican, sin que
+  // nada avise. Pasó el 1-sep-2026 al registrar la seguridad social.
+  //
+  // La apertura se pide por su propio TIPO y no se deduce de `subtotal` ni de
+  // la posición: `subtotal` también rotula los cortes del medio —«Disponible
+  // estimado a diciembre» era uno—, y sumarle las entradas y las salidas de
+  // toda la cuenta a un corte intermedio da un número que no es nada, y un
+  // aviso de descuadre falso. Un aviso que grita sin razón es peor que no
+  // tenerlo: enseña a ignorarlo.
+  //
+  // Mismo criterio de prudencia que arriba: si falta la apertura, si viene
+  // repetida, si hay un tipo desconocido o si alguna cifra está ilegible, queda
+  // en null —«no se pudo comprobar»—, que no es «no cuadra».
+  const apertura = cuenta.find(f => f.tipo === 'apertura') ?? null;
+  const unaSola = (t) => cuenta.filter(f => f.tipo === t).length === 1;
+  const puedeCuadrarSaldo = saldo !== null && apertura !== null &&
+    !cuenta.some(f => f.tipo === 'otro') &&
+    unaSola('saldo') && unaSola('apertura') &&
+    saldo.valor !== null && apertura.valor !== null &&
+    !sumables.some(f => f.valor === null);
+  const saldoCalculado = puedeCuadrarSaldo
+    ? Math.round(sumables.reduce((t, f) => t + f.valor, apertura.valor))
+    : null;
+  const cuadraSaldo = puedeCuadrarSaldo
+    ? saldoCalculado === Math.round(saldo.valor)
+    : null;
+
+  if (cuadraSaldo === false) {
+    avisos.push(
+      `La caja no cuadra: «${apertura.concepto}» con las entradas y las salidas de abajo da ` +
+      `${cifraDeCaja('saldo', saldoCalculado)}, y arriba dice ${saldo.valorTexto}. ` +
+      'Suele ser un movimiento que entró a la hoja CAJA y no se copió a «Tablero Caja». Revisá la hoja.'
+    );
+  }
+
   return {
     hay: filas.length > 0,
     saldo,
@@ -609,6 +659,9 @@ export function construirVistaCaja(caja) {
     cuadra,
     calculada,
     calculadaTexto: calculada === null ? '—' : pesosConSigno(calculada),
+    cuadraSaldo,
+    saldoCalculado,
+    saldoCalculadoTexto: saldoCalculado === null ? '—' : cifraDeCaja('saldo', saldoCalculado),
     avisos
   };
 }

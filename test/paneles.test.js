@@ -1164,3 +1164,99 @@ test('con un saldo repetido la cuenta tampoco se comprueba: no se sabe cuál ent
   assert.equal(c.cuadra, null);
   assert.deepEqual(c.avisos, [], 'un descuadre falso es un aviso que nadie vuelve a mirar');
 });
+
+// ---- la caja del tablero: que las entradas y las salidas den el saldo ----
+//
+// La otra comprobación, y la única que corre desde que la brecha salió del
+// tablero. La cuenta de abajo tiene la FORMA de la caja real: abre en un saldo,
+// entra plata, sale plata y cierra en el saldo de arriba. 100 + 30 − 12 = 118.
+
+const CAJA_BANCO = [
+  { concepto: 'SALDO EN BANCO AL 1 DE SEPTIEMBRE', valor: 118000000, texto: '', tipo: 'saldo' },
+  { concepto: 'Saldo en banco al 5 de agosto', valor: 100000000, texto: '', tipo: 'apertura' },
+  { concepto: 'Cuota inicial lote 1', valor: 30000000, texto: '', tipo: 'suma' },
+  { concepto: 'Pagos del mes', valor: -12000000, texto: '', tipo: 'resta' },
+  { concepto: 'Cuenta', valor: null, texto: 'Banco de prueba, ahorros', tipo: 'nota' }
+];
+
+test('cuando las entradas y las salidas dan el saldo, la caja cuadra y no avisa nada', () => {
+  const c = soloCaja(CAJA_BANCO);
+  assert.equal(c.cuadraSaldo, true);
+  assert.equal(c.saldoCalculado, 118000000);
+  assert.equal(c.saldoCalculadoTexto, '$118.000.000');
+  assert.deepEqual(c.avisos, []);
+});
+
+test('un movimiento que quedó fuera del tablero se delata: el saldo no cuadra', () => {
+  // Es el error real: entra un pago a la hoja CAJA y no se copia la fila a
+  // «Tablero Caja». El saldo de arriba ya bajó; el movimiento que lo explica
+  // no está. Antes de esta comprobación, el socio veía las dos cifras juntas
+  // sin que nada dijera que no se hablan.
+  const sinLaFila = CAJA_BANCO.filter(f => f.concepto !== 'Pagos del mes');
+  const c = soloCaja(sinLaFila);
+
+  assert.equal(c.cuadraSaldo, false);
+  assert.equal(c.saldoCalculado, 130000000);
+  assert.equal(c.avisos.length, 1);
+  assert.match(c.avisos[0], /no cuadra/);
+  assert.match(c.avisos[0], /\$130\.000\.000/, 'dice a cuánto dan los movimientos');
+  assert.match(c.avisos[0], /\$118\.000\.000/, 'y contra qué saldo se compara');
+  assert.match(c.avisos[0], /Tablero Caja/, 'y dónde mirar, que es la causa de siempre');
+});
+
+test('el descuadre se mide al peso, sin ruido de la coma flotante', () => {
+  // Las cifras de la hoja traen centavos —el 4×1000 sale en $67.442,01— y la
+  // suma en coma flotante deja fracciones que no son un descuadre.
+  const c = soloCaja([
+    { concepto: 'SALDO', valor: 132677431.99, texto: '', tipo: 'saldo' },
+    { concepto: 'Apertura', valor: 97604287, texto: '', tipo: 'apertura' },
+    { concepto: 'Abonos', valor: 50000000, texto: '', tipo: 'suma' },
+    { concepto: 'Pagos', valor: -14603213, texto: '', tipo: 'resta' },
+    { concepto: 'Costos bancarios', valor: -67442.01, texto: '', tipo: 'resta' },
+    { concepto: 'Seguridad social', valor: -256200, texto: '', tipo: 'resta' }
+  ]);
+  assert.equal(c.cuadraSaldo, true);
+  assert.deepEqual(c.avisos, []);
+});
+
+test('sin apertura no se comprueba nada, y no se acusa de descuadre', () => {
+  // «No se pudo comprobar» no es «no cuadra». Sin el saldo de arranque, la
+  // suma de los movimientos no se compara contra nada.
+  const c = soloCaja(CAJA_BANCO.filter(f => f.tipo !== 'apertura'));
+  assert.equal(c.cuadraSaldo, null);
+  assert.equal(c.saldoCalculado, null);
+  assert.equal(c.saldoCalculadoTexto, '—');
+  assert.deepEqual(c.avisos, []);
+});
+
+test('un subtotal del medio no se confunde con la apertura', () => {
+  // `CAJA` es la cuenta vieja de la proyección: su `subtotal` es un corte del
+  // medio («Disponible estimado a diciembre»), no un saldo de arranque.
+  // Tratarlo como apertura daría 88 − 544 = −456 millones contra un saldo de
+  // 132, o sea un aviso de descuadre falso en una cuenta que sí cuadra.
+  const c = cajaDe();
+  assert.equal(c.cuadraSaldo, null, 'sin fila de apertura no hay nada que comprobar');
+  assert.equal(c.cuadra, true, 'y la comprobación que sí aplica ahí sigue dando');
+  assert.deepEqual(c.avisos, []);
+});
+
+test('con dos aperturas tampoco se comprueba: no se sabe cuál abre la cuenta', () => {
+  const c = soloCaja([...CAJA_BANCO,
+    { concepto: 'Saldo en la otra cuenta', valor: 20000000, texto: '', tipo: 'apertura' }]);
+  assert.equal(c.cuadraSaldo, null);
+  assert.deepEqual(c.avisos, [], 'un descuadre falso es un aviso que nadie vuelve a mirar');
+});
+
+test('una cifra ilegible en el camino frena la comprobación en vez de acusar', () => {
+  const c = soloCaja(CAJA_BANCO.map(f =>
+    f.concepto === 'Pagos del mes' ? { ...f, valor: null } : f));
+  assert.equal(c.cuadraSaldo, null);
+  assert.deepEqual(c.avisos, []);
+});
+
+test('la apertura se ve como el subtotal: un corte, sin signo de entrada ni de salida', () => {
+  const c = soloCaja(CAJA_BANCO);
+  const ap = c.movimientos.find(m => m.tipo === 'apertura');
+  assert.equal(ap.valorTexto, '$100.000.000');
+  assert.ok(!ap.valorTexto.startsWith('+'), 'la apertura no es una entrada de plata');
+});
