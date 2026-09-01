@@ -89,10 +89,11 @@ function fichaConCartera(lote, c) {
     { etiqueta: 'Comprador', valor: c.comprador || '—' },
     { etiqueta: 'Estado', valor: c.estado || '—' }
   ];
-  // El Worker de hoy no manda una fecha de promesa aparte: la hoja la escribe
-  // dentro de la columna Estado. Si algún día llega como campo propio, entra
-  // acá sola y ya viene escapada por `escaparTextos`.
-  if (c.fechaPromesa) filas.push({ etiqueta: 'Promesa', valor: c.fechaPromesa });
+  // La fecha de la promesa de compraventa: «en cuánto lo compró», que fue una de
+  // las dos cosas que se pidieron de la ficha. Sale de la columna J del espejo.
+  // Va condicionada porque el lote 2 es en especie y no tiene promesa, y porque
+  // una hoja recién montada puede no traerla todavía.
+  if (c.promesa) filas.push({ etiqueta: 'Promesa', valor: c.promesa });
   filas.push(
     { etiqueta: 'Área', valor: metros(lote.area) },
     { etiqueta: 'Precio', valor: c.precioTexto },

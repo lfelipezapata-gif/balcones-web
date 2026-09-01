@@ -132,6 +132,34 @@ export function aNumero(valor) {
   return null;
 }
 
+// Sheets cuenta las fechas como días desde el 30 de diciembre de 1899.
+const EPOCA_SHEETS = Date.UTC(1899, 11, 30);
+const DIA = 86400000;
+
+/**
+ * Deja una fecha en `dd/mm/aaaa`, venga como venga de la hoja.
+ *
+ * Con `valueRenderOption=UNFORMATTED_VALUE` —que es lo que pedimos, y con razón,
+ * porque es lo que evita adivinar formatos de número— una celda de fecha no llega
+ * como «19/08/2026» sino como **46253**, su número serial. Sin esta conversión la
+ * ficha del lote mostraba ese número crudo al socio.
+ *
+ * Si la celda trae texto se devuelve tal cual: puede que alguien la haya escrito a
+ * mano, y ahí el texto es más confiable que cualquier interpretación nuestra.
+ */
+export function fechaLegible(valor) {
+  if (typeof valor === 'number' && Number.isFinite(valor)) {
+    // Serial 1 es el 31-dic-1899. Por debajo de eso no es una fecha, es un número
+    // que cayó en la columna equivocada: se devuelve como texto y se nota.
+    if (valor < 1) return String(valor);
+    const d = new Date(EPOCA_SHEETS + Math.round(valor) * DIA);
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getUTCFullYear()}`;
+  }
+  return String(valor ?? '');
+}
+
 // Las seis filas que el Resumen tiene que traer. Si falta alguna, se avisa por su nombre.
 const CONCEPTOS_RESUMEN = [
   ['Vendido', 'vendido'],
@@ -224,6 +252,8 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
       proximaCuotaValor,
       proximaCuotaIlegible: !cuotaVacia && proximaCuotaValor === null,
       estado: String(f[8] ?? ''),
+      // Columna J del espejo: la fecha de la promesa de compraventa.
+      promesa: fechaLegible(f[9]),
       // Se copia antes de ordenar: `.sort()` ordena en sitio y dos filas con el mismo
       // lote recibían la MISMA instancia guardada en el Map, así que una mutaba a la otra.
       abonos: [...(abonosPorLote.get(lote) ?? [])].sort((a, b) => a.fecha.localeCompare(b.fecha))

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPair, exportPKCS8, decodeJwt } from 'jose';
-import { tokenDeAcceso, leerEspejo, aNumero, normalizarTablero } from '../src/sheets.js';
+import { tokenDeAcceso, leerEspejo, aNumero, normalizarTablero, fechaLegible } from '../src/sheets.js';
 
 const AHORA = new Date('2026-08-31T21:50:00.000Z');
 
@@ -406,4 +406,21 @@ test('un egreso ilegible sin categoría escrita se atribuye a «Sin categoría»
   const t = normalizarTablero(roto, { ahora: AHORA });
   const aviso = t.avisos.find(a => a.pestana === 'Egresos');
   assert.equal(aviso.categoria, 'Sin categoría');
+});
+
+test('una fecha de la hoja llega legible y no como número serial', () => {
+  // Con UNFORMATTED_VALUE, Sheets manda 46253 en vez de «19/08/2026».
+  assert.equal(fechaLegible(46253), '19/08/2026');
+  assert.equal(fechaLegible(45672), '15/01/2025');
+  assert.equal(fechaLegible(1), '31/12/1899', 'el serial 1 es el origen del calendario de Sheets');
+});
+
+test('lo que no es un serial de fecha se devuelve tal cual', () => {
+  assert.equal(fechaLegible('19/08/2026'), '19/08/2026', 'una fecha escrita a mano se respeta');
+  assert.equal(fechaLegible('contra escritura'), 'contra escritura');
+  assert.equal(fechaLegible(''), '');
+  assert.equal(fechaLegible(null), '');
+  assert.equal(fechaLegible(undefined), '');
+  assert.equal(fechaLegible(0), '0', 'un 0 no es una fecha: cayó en la columna equivocada y se nota');
+  assert.equal(fechaLegible(-5), '-5');
 });

@@ -311,7 +311,7 @@ test('ningún valor de ninguna ficha sale con HTML crudo', () => {
     cartera: [{
       lote: 1, area: 2754, comprador: CARGA, precio: 1, abonado: 1, saldo: 1,
       proximaCuotaFecha: CARGA, proximaCuotaValor: 1, estado: CARGA,
-      fechaPromesa: CARGA, abonos: []
+      promesa: CARGA, abonos: []
     }]
   };
   const v = construirVistaLotes(vistaDe(malicioso), INV);
@@ -411,4 +411,15 @@ test('una categoría con HTML en el nombre o en el concepto llega escapada al pa
   assert.doesNotMatch(g.categorias[0].movimientos[0].concepto, /<script>/);
   assert.doesNotMatch(g.categorias[0].movimientos[0].fecha, /<svg/);
   assert.match(g.categorias[0].categoria, /&lt;img/);
+});
+
+test('la promesa aparece en la ficha cuando la hoja la trae, y no cuando no', () => {
+  const con = { ...TABLERO, cartera: [{ ...TABLERO.cartera[0], promesa: '19/08/2026' }] };
+  const f = construirVistaLotes(vistaDe(con), INV).fichas.find(x => x.n === TABLERO.cartera[0].lote);
+  assert.equal(f.filas.find(x => x.etiqueta === 'Promesa')?.valor, '19/08/2026');
+
+  const sin = { ...TABLERO, cartera: [{ ...TABLERO.cartera[0], promesa: '' }] };
+  const g = construirVistaLotes(vistaDe(sin), INV).fichas.find(x => x.n === TABLERO.cartera[0].lote);
+  assert.equal(g.filas.some(x => x.etiqueta === 'Promesa'), false,
+    'sin fecha no debe quedar una fila «Promesa» vacía');
 });
