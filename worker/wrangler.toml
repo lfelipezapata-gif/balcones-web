@@ -7,8 +7,8 @@ compatibility_date = "2026-08-31"
 # esté vacío, el Worker responde 500 de configuración a todo el mundo — a
 # propósito: con el identificador vacío, Google apaga la verificación de
 # destinatario y entraría cualquiera. Ver worker/src/auth.js.
-GOOGLE_CLIENT_ID = ""
-ID_HOJA_ESPEJO = ""
+GOOGLE_CLIENT_ID = "145625987680-pt8bss04rarfnnocghl7gpkjm09969oe.apps.googleusercontent.com"
+ID_HOJA_ESPEJO = "1fsjHq6LRWkpbdWtjnQ8ppSP1lL8PGonAHFFnfSbH0-I"
 
 # El sitio en GitHub Pages. Es el único origen al que el Worker le responde.
 ORIGEN_PERMITIDO = "https://lfelipezapata-gif.github.io"
