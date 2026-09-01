@@ -11,9 +11,14 @@
 </head>
 <body class="tablero">
 
-<header>
-  <h1>Balcones — Tablero de socios</h1>
-  <p id="frescura" class="frescura"></p>
+<header class="barra">
+  <div class="barra-dentro">
+    <div>
+      <h1>Condominio Balcones</h1>
+      <p class="sub">Tablero de socios</p>
+    </div>
+    <p id="frescura" class="frescura"></p>
+  </div>
 </header>
 
 <section id="entrada">
@@ -24,17 +29,53 @@
 
 <main id="contenido" hidden>
   <p id="alerta" class="alerta" hidden></p>
-  <section id="resumen" class="resumen"></section>
-  <section><h2>Entra — la cartera</h2><div id="cartera"></div></section>
-  <section><h2>Sale — la obra</h2><div id="egresos"></div></section>
-  <section id="avisos"></section>
+
+  <div id="resumen" class="cifras"></div>
+
+  <nav class="pestanas" role="tablist" aria-label="Secciones del tablero">
+    <button type="button" class="pestana" id="tab-lotes" role="tab"
+            aria-selected="true" aria-controls="panel-lotes">Los lotes</button>
+    <button type="button" class="pestana" id="tab-gastos" role="tab"
+            aria-selected="false" aria-controls="panel-gastos">En qué se ha gastado</button>
+  </nav>
+
+  <section id="panel-lotes" role="tabpanel" aria-labelledby="tab-lotes">
+    <div class="columnas">
+      <div class="plano">
+        <div id="mapa" class="mapa-caja"></div>
+        <p class="leyenda">
+          <span><span class="muestra" data-estado="disponible"></span>Disponible</span>
+          <span><span class="muestra" data-estado="vendido"></span>Vendido</span>
+          <span><span class="muestra" data-estado="seleccionado"></span>Seleccionado</span>
+        </p>
+      </div>
+      <div id="ficha" class="ficha"></div>
+    </div>
+  </section>
+
+  <section id="panel-gastos" role="tabpanel" aria-labelledby="tab-gastos" hidden>
+    <div id="gastos"></div>
+    <div id="movimientos" class="movimientos"></div>
+  </section>
+
+  <section id="avisos" class="avisos"></section>
 </main>
 
 <script type="module">
 import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js';
-import { construirVistaTablero } from '../assets/js/tablero.js';
+import { construirVistaTablero, escapar } from '../assets/js/tablero.js';
+import { construirCifras, construirVistaLotes, construirVistaGastos } from '../assets/js/paneles.js';
+import { pintarMapa } from '../assets/js/mapa.js';
 
 const $ = (id) => document.getElementById(id);
+
+// TODO el texto que sale de la hoja de Google llega acá ya escapado: lo escapa
+// `construirVistaTablero` en el borde y los paneles no lo vuelven a tocar (ver
+// assets/js/paneles.js). Lo único que este archivo interpola sin pasar por ahí
+// son números que él mismo valida —el porcentaje de la barra, el índice de una
+// categoría, el estado del lote validado por `validarInventario`—. Si mañana
+// alguien mete acá un campo nuevo del Worker sin pasarlo por la vista, vuelve
+// el XSS del comprador `<img src=x onerror=...>`.
 
 function mostrarError(mensaje) {
   $('error').textContent = mensaje;
@@ -42,6 +83,158 @@ function mostrarError(mensaje) {
   $('entrada').hidden = false;
   $('contenido').hidden = true;
 }
+
+/* --- pestañas ---------------------------------------------------------- */
+
+const PESTANAS = [['tab-lotes', 'panel-lotes'], ['tab-gastos', 'panel-gastos']];
+
+function verPestana(tabActiva) {
+  for (const [tab, panel] of PESTANAS) {
+    const activa = tab === tabActiva;
+    $(tab).setAttribute('aria-selected', activa ? 'true' : 'false');
+    $(panel).hidden = !activa;
+  }
+}
+for (const [tab] of PESTANAS) {
+  $(tab).addEventListener('click', () => verPestana(tab));
+}
+
+/* --- el plano y la ficha ----------------------------------------------- */
+
+function pintarFicha(f) {
+  if (!f) { $('ficha').innerHTML = ''; return; }
+  const filas = f.filas.map(x =>
+    `<div class="dato"><dt>${x.etiqueta}</dt><dd>${x.valor}</dd></div>`).join('');
+  // `porcentaje` es un entero de 0 a 100 que calculó `porcentajePagado`, no un
+  // dato de la hoja: por eso puede ir dentro de un `style`.
+  const progreso = f.progreso
+    ? `<div class="progreso">
+         <div class="barra-progreso"><span style="width:${f.progreso.porcentaje}%"></span></div>
+         <p class="progreso-texto">${f.progreso.texto}</p>
+       </div>`
+    : '';
+  const calendario = f.calendario
+    ? `<p class="calendario${f.calendario.vencido ? ' vencido' : ''}">
+         <span class="rot">Próxima cuota</span>${f.calendario.texto}</p>`
+    : '';
+  const nota = f.nota ? `<p class="ficha-nota">${f.nota}</p>` : '';
+
+  $('ficha').innerHTML = `
+    <p class="ficha-cabeza">
+      <span class="ficha-numero">${f.numeroTexto}</span>
+      <span class="pildora" data-estado="${f.estado}">${f.etiqueta}</span>
+    </p>
+    <dl class="ficha-datos">${filas}</dl>
+    ${progreso}${calendario}${nota}`;
+}
+
+// Monta el plano, lo deja clicable y devuelve los avisos de lo que no cuadra
+// entre el plano y la cartera. Va aparte del resto a propósito: si el plano
+// revienta, las cifras, los gastos y los avisos no tienen por qué caerse con él.
+async function montarPlano(vista) {
+  const inv = await (await fetch('../data/lotes.json')).json();
+
+  // El plano se inserta en el documento (no como <img>) porque el color de
+  // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
+  // entrar desde afuera.
+  const caja = $('mapa');
+  caja.innerHTML = await (await fetch('../img/mapa.svg')).text();
+  const svg = caja.querySelector('svg');
+  pintarMapa(svg, inv);
+
+  const { fichas, inicial, avisos } = construirVistaLotes(vista, inv);
+  const porLote = new Map(fichas.map(f => [f.n, f]));
+
+  const poligonos = [...svg.querySelectorAll('.lote[data-lote]')];
+  for (const p of poligonos) {
+    p.setAttribute('tabindex', '0');
+    p.setAttribute('role', 'button');
+  }
+
+  function seleccionar(n) {
+    const f = porLote.get(n);
+    if (!f) return;
+    for (const p of poligonos) {
+      const activo = p.dataset.lote === String(n);
+      p.toggleAttribute('data-seleccionado', activo);
+      p.setAttribute('aria-pressed', activo ? 'true' : 'false');
+      const rotulo = svg.querySelector(`.rotulo-lote[data-lote="${p.dataset.lote}"]`);
+      if (rotulo) rotulo.toggleAttribute('data-seleccionado', activo);
+    }
+    pintarFicha(f);
+  }
+
+  svg.addEventListener('click', (e) => {
+    const p = e.target.closest?.('.lote[data-lote]');
+    if (p) seleccionar(Number(p.dataset.lote));
+  });
+  svg.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const p = e.target.closest?.('.lote[data-lote]');
+    if (!p) return;
+    e.preventDefault();
+    seleccionar(Number(p.dataset.lote));
+  });
+
+  if (inicial !== null) seleccionar(inicial);
+  return avisos;
+}
+
+/* --- gastos ------------------------------------------------------------ */
+
+function pintarGastos(vista) {
+  const g = construirVistaGastos(vista.egresosPorCategoria);
+
+  if (g.categorias.length === 0) {
+    $('gastos').innerHTML =
+      '<p class="invitacion">Todavía no hay movimientos de obra que mostrar. Mirá los avisos del final.</p>';
+    $('movimientos').innerHTML = '';
+    return;
+  }
+
+  const filas = g.categorias.map(c => `
+    <li>
+      <button type="button" class="categoria" data-indice="${c.indice}" aria-expanded="false">
+        <span class="cat-nombre">${c.categoria}</span>
+        <span class="cat-total${c.incompleto ? ' incompleto' : ''}">${c.totalTexto}</span>
+        <span class="cat-barra"><span style="width:${c.proporcion}%"></span></span>
+      </button>
+    </li>`).join('');
+
+  $('gastos').innerHTML = `
+    <p class="gastos-total">Total de obra
+      <strong class="${g.incompleto ? 'incompleto' : ''}">${g.totalTexto}</strong></p>
+    <ul class="categorias">${filas}</ul>`;
+
+  $('movimientos').innerHTML =
+    '<p class="invitacion">Tocá una categoría para ver en qué se fue.</p>';
+
+  const botones = [...$('gastos').querySelectorAll('.categoria')];
+  for (const b of botones) {
+    b.addEventListener('click', () => {
+      const c = g.categorias[Number(b.dataset.indice)];
+      const abierta = b.getAttribute('aria-expanded') === 'true';
+      for (const otro of botones) otro.setAttribute('aria-expanded', 'false');
+
+      if (abierta) {
+        $('movimientos').innerHTML =
+          '<p class="invitacion">Tocá una categoría para ver en qué se fue.</p>';
+        return;
+      }
+      b.setAttribute('aria-expanded', 'true');
+      $('movimientos').innerHTML = `
+        <h3>${c.categoria}</h3>
+        ${c.movimientos.map(m => `
+          <p class="mov">
+            <span class="fecha">${m.fecha}</span>
+            <span class="concepto">${m.concepto}</span>
+            <span class="valor">${m.valorTexto}</span>
+          </p>`).join('')}`;
+    });
+  }
+}
+
+/* --- carga ------------------------------------------------------------- */
 
 async function cargar(credencial) {
   let r;
@@ -69,28 +262,34 @@ async function cargar(credencial) {
 
   if (v.alerta) { $('alerta').textContent = v.alerta; $('alerta').hidden = false; }
 
-  $('resumen').innerHTML = v.resumen.map(r => `
-    <div class="cifra"><span>${r.etiqueta}</span><strong>${r.texto}</strong></div>`).join('');
+  $('resumen').innerHTML = construirCifras(v.resumen).map(c => `
+    <div class="cifra-caja">
+      <span class="rot">${c.etiqueta}</span><span class="val">${c.texto}</span>
+    </div>`).join('');
 
-  $('cartera').innerHTML = v.cartera.map(c => `
-    <details class="fila">
-      <summary>
-        <b>Lote ${c.lote}</b> · ${c.comprador}
-        <span class="saldo">${c.saldoTexto}</span>
-      </summary>
-      <p>Precio ${c.precioTexto} · Abonado ${c.abonadoTexto} · ${c.estado}</p>
-      <p>Próxima cuota: ${c.proximaCuotaTexto}</p>
-      <ul>${c.abonos.map(a => `<li>${a.fecha} — ${a.valorTexto} ${a.medio}</li>`).join('')}</ul>
-    </details>`).join('');
+  // `pintarMapa` revienta a propósito si el plano y data/lotes.json dejan de
+  // hablar del mismo conjunto de lotes. Sin este try/catch esa excepción se
+  // llevaba por delante los gastos y los avisos, que no tienen nada que ver.
+  let avisosDelPlano = [];
+  try {
+    avisosDelPlano = await montarPlano(v);
+  } catch (e) {
+    $('mapa').innerHTML = '';
+    $('ficha').innerHTML =
+      '<p class="plano-error">No se pudo dibujar el plano de lotes. Las cifras y los gastos de abajo sí están al día.</p>';
+    avisosDelPlano = [`No se pudo dibujar el plano de lotes: ${String(e.message ?? e)}`];
+  }
 
-  $('egresos').innerHTML = v.egresosPorCategoria.map(g => `
-    <details class="fila">
-      <summary><b>${g.categoria}</b><span class="saldo${g.incompleto ? ' incompleto' : ''}">${g.totalTexto}</span></summary>
-      <ul>${g.movimientos.map(m => `<li>${m.fecha} — ${m.concepto} — ${m.valorTexto}</li>`).join('')}</ul>
-    </details>`).join('');
+  pintarGastos(v);
 
-  $('avisos').innerHTML = v.avisos.length
-    ? '<h2>Revisar</h2><ul>' + v.avisos.map(a => `<li>${a}</li>`).join('') + '</ul>'
+  // Los avisos del plano se muestran junto con los del Worker, en la misma
+  // lista: los dos dicen «esto que ves puede estar mal, andá a revisar la
+  // fuente». Los del Worker ya salieron escapados de `construirVistaTablero`;
+  // los del plano los arma este archivo y por eso se escapan acá, sin
+  // excepción, aunque hoy solo lleven números.
+  const avisos = [...v.avisos, ...avisosDelPlano.map(escapar)];
+  $('avisos').innerHTML = avisos.length
+    ? '<h2>Revisar</h2><ul>' + avisos.map(a => `<li>${a}</li>`).join('') + '</ul>'
     : '';
 }
 

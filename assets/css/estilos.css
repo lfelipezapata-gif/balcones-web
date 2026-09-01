@@ -113,3 +113,317 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   border-radius: 6px;
   padding: 0 .35rem;
 }
+
+/* ═════════════════════════════════════════════════════════════════════════
+   TABLERO DE SOCIOS — rediseño aprobado el 31-ago-2026
+
+   Este archivo lo comparten la vitrina pública (index.html) y el tablero
+   privado (socios/index.html). Todo lo de abajo cuelga de `.tablero`, la clase
+   del <body> del tablero: si un selector nuevo de esta sección no empieza por
+   `.tablero`, está mal y le va a mover algo a la vitrina.
+
+   Es plano a propósito —sin sombras, sin degradados, tipografía del sistema—
+   y el color solo aparece donde significa algo: el verde de la marca en la
+   cabecera, el verde de la pestaña activa, el dorado del lote seleccionado y
+   el ámbar de lo vencido o incompleto.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* La cabecera va a sangre. La regla general de arriba le pone a todo <header>
+   un ancho máximo y padding; acá se le quita y el ancho lo maneja el bloque
+   de adentro, que es el que se alinea con el resto de la página. */
+.tablero header.barra {
+  background: var(--verde-marca);
+  color: #f3efe4;
+  max-width: none;
+  margin: 0;
+  padding: 1.15rem 1.25rem 1.05rem;
+}
+.tablero .barra-dentro {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .35rem 1rem;
+}
+.tablero .barra h1 {
+  margin: 0;
+  color: var(--dorado);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+.tablero .barra .sub { margin: .15rem 0 0; font-size: .88rem; color: #c3cdc4; }
+/* Más específico que `.tablero .frescura`, que es gris sobre papel: acá el
+   fondo es oscuro. El sello va en la cabecera para que se vea siempre, antes
+   que cualquier cifra. */
+.tablero .barra .frescura { margin: 0; font-size: .8rem; color: #9faea2; }
+
+.tablero main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+/* Los hijos directos de <main> ya no llevan el padding ni el ancho de la
+   regla general de <section>: el que manda es el de <main>. */
+.tablero main > * { max-width: none; padding: 0; margin: 0 0 1.25rem; }
+.tablero main > *:last-child { margin-bottom: 0; }
+
+/* --- las seis cifras --------------------------------------------------- */
+/* Tarjetas blancas contiguas: el hilo que las separa es el fondo del propio
+   contenedor asomándose por el `gap` de 1 px. */
+.tablero .cifras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--borde);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.tablero .cifra-caja { background: #fff; padding: .75rem .7rem; min-width: 0; }
+.tablero .cifra-caja .rot {
+  display: block;
+  font-size: .66rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #7a7a72;
+}
+.tablero .cifra-caja .val {
+  display: block;
+  margin-top: .2rem;
+  font-size: .95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 620px) { .tablero .cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .tablero .cifras { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+/* --- las pestañas ------------------------------------------------------ */
+.tablero .pestanas { display: flex; flex-wrap: wrap; gap: .5rem; }
+.tablero .pestana {
+  font: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+  color: #4a4a44;
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: .5rem 1.05rem;
+  cursor: pointer;
+}
+.tablero .pestana[aria-selected="true"] {
+  background: var(--verde);
+  border-color: var(--verde);
+  color: #fff;
+}
+
+/* --- pestaña «Los lotes» ----------------------------------------------- */
+.tablero .columnas { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) {
+  .tablero .columnas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+
+.tablero .plano {
+  background: #f4f4f1;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1rem;
+}
+/* El plano acá es un control, no una ilustración: se puede tocar, recibe foco
+   y el seleccionado se pinta de dorado. En la vitrina nada de esto aplica —
+   todos estos selectores empiezan por `.tablero`. */
+.tablero .mapa .lote { cursor: pointer; }
+.tablero .mapa .lote:hover { stroke: var(--dorado); stroke-width: 1.6; }
+.tablero .mapa .lote:focus { outline: none; }
+.tablero .mapa .lote:focus-visible { stroke: var(--dorado); stroke-width: 2.4; }
+/* Cuatro clases contra las tres de `.mapa .lote[data-estado="disponible"]`:
+   el dorado del seleccionado gana sobre el verde del disponible. */
+.tablero .mapa .lote[data-seleccionado] { fill: var(--dorado); stroke: #fff; }
+.tablero .mapa .rotulo-lote[data-seleccionado] .numero { fill: #3b2c06; }
+.tablero .mapa .rotulo-lote[data-seleccionado] .area { fill: #5e4a0f; }
+.tablero .plano .leyenda { margin: .85rem 0 0; }
+.tablero .leyenda .muestra[data-estado="seleccionado"] {
+  background: var(--dorado);
+  border-color: var(--dorado);
+}
+.tablero .plano-error { margin: 0; color: #9b2c2c; font-weight: 600; }
+
+/* --- la ficha del lote -------------------------------------------------- */
+.tablero .ficha {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1.1rem 1.15rem;
+}
+.tablero .ficha-cabeza { display: flex; align-items: center; gap: .75rem; margin: 0 0 .85rem; }
+.tablero .ficha-numero { font-size: 2.1rem; font-weight: 700; line-height: 1; }
+.tablero .pildora {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: .3rem .62rem;
+  border-radius: 999px;
+  background: #f0eee8;
+  color: #57544c;
+  border: 1px solid var(--borde);
+}
+.tablero .pildora[data-estado="disponible"] { background: #e8f1e9; color: #245a33; border-color: #c6ddca; }
+.tablero .pildora[data-estado="especie"] { background: #f7efdc; color: #7a5f14; border-color: #e4d3a2; }
+
+.tablero .ficha-datos { margin: 0; }
+.tablero .dato {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: .45rem 0;
+  border-top: 1px solid var(--borde);
+}
+.tablero .dato:first-child { border-top: 0; padding-top: 0; }
+.tablero .dato dt { color: #7a7a72; font-size: .88rem; flex: 0 0 auto; }
+/* `anywhere` es lo que evita que un nombre largo o una carga de inyección
+   escapada empujen la ficha y saquen la página de la pantalla en 390 px. */
+.tablero .dato dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.tablero .progreso { margin-top: .95rem; }
+/* Ojo con el nombre: `.barra` a secas ya es la cabecera oscura, y una regla
+   con ese selector le metía a la cabecera un alto de 6 px y `overflow:hidden`
+   que se comía el «Tablero de socios». Por eso esta se llama distinto. */
+.tablero .barra-progreso { height: 6px; border-radius: 999px; background: #eceae4; overflow: hidden; }
+.tablero .barra-progreso > span { display: block; height: 100%; background: var(--verde); }
+.tablero .progreso-texto { margin: .35rem 0 0; font-size: .82rem; color: #7a7a72; }
+
+/* El calendario del saldo, al pie de la ficha. En ámbar cuando el texto habla
+   de algo vencido: es el único aviso de mora que hay: la hoja la escribe en
+   palabras y no existe ninguna columna que la marque. */
+.tablero .calendario {
+  margin: .95rem 0 0;
+  padding: .7rem .8rem;
+  background: #f6f5f1;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: .9rem;
+  overflow-wrap: anywhere;
+}
+.tablero .calendario .rot {
+  display: block;
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #7a7a72;
+  margin-bottom: .15rem;
+}
+.tablero .calendario.vencido { background: #fff4e0; border-color: #e8c98a; color: #8a5a00; }
+.tablero .calendario.vencido .rot { color: #8a5a00; }
+.tablero .ficha-nota { margin: .9rem 0 0; font-size: .88rem; color: #6b6b6b; }
+
+/* --- pestaña «En qué se ha gastado» ------------------------------------ */
+.tablero .gastos-total { margin: 0 0 .85rem; font-size: .88rem; color: #7a7a72; }
+.tablero .gastos-total strong {
+  color: var(--tinta);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+.tablero .categorias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+.tablero .categorias li + li { border-top: 1px solid var(--borde); }
+.tablero .categoria {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .35rem .75rem;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  background: #fff;
+  border: 0;
+  padding: .7rem .9rem;
+  cursor: pointer;
+}
+.tablero .categoria[aria-expanded="true"] { background: #f4f4f1; }
+.tablero .cat-nombre { font-weight: 600; flex: 1 1 8ch; min-width: 0; overflow-wrap: anywhere; }
+.tablero .cat-total {
+  flex: 0 0 auto;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* El total marcado como incompleto es un bloque ancho («$204.988.240 + 2
+   movimientos sin leer»). Compitiendo por la misma línea, en 390 px le dejaba
+   al nombre de la categoría un ancho de una letra y lo partía en vertical.
+   Se lleva su propia línea completa. */
+.tablero .cat-total.incompleto { flex: 1 0 100%; }
+.tablero .cat-barra {
+  flex: 1 0 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: #eceae4;
+  overflow: hidden;
+}
+.tablero .cat-barra > span { display: block; height: 100%; background: var(--verde); }
+
+.tablero .invitacion { margin: 1rem 0 0; color: #6b6b6b; font-size: .92rem; }
+.tablero .movimientos { margin: 1.1rem 0 0; }
+.tablero .movimientos h3 { margin: 0 0 .3rem; font-size: .95rem; }
+.tablero .mov {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .1rem .6rem;
+  padding: .5rem 0;
+  border-top: 1px solid var(--borde);
+  font-size: .9rem;
+}
+.tablero .mov .fecha { color: #7a7a72; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.tablero .mov .concepto { flex: 1 1 10ch; min-width: 0; overflow-wrap: anywhere; }
+.tablero .mov .valor {
+  font-weight: 700;
+  white-space: nowrap;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- avisos ------------------------------------------------------------- */
+.tablero .avisos h2 { font-size: 1rem; margin: 0 0 .5rem; }
+.tablero .avisos ul { margin: 0; padding-left: 1.1rem; }
+.tablero .avisos li { margin-bottom: .35rem; overflow-wrap: anywhere; }
+
+/* Un total sumado sobre filas que no se pudieron leer. Mismo tratamiento que
+   `.fila .saldo.incompleto` de arriba, para el marcado nuevo: el texto ya dice
+   «+ N movimientos sin leer» y el ámbar impide que se lea como una cifra
+   normal de un vistazo. Va después de `.cat-total` a propósito — las dos
+   reglas pesan igual y esta tiene que ganarle el `white-space`. */
+.tablero .incompleto {
+  display: inline-block;
+  white-space: normal;
+  text-align: right;
+  color: #8a5a00;
+  background: #fff4e0;
+  border: 1px solid #e8c98a;
+  border-radius: 6px;
+  padding: 0 .35rem;
+}
+
+/* --- la pantalla de entrada -------------------------------------------- */
+.tablero #entrada { max-width: 520px; text-align: center; }
+.tablero #entrada #boton-google { display: flex; justify-content: center; }
