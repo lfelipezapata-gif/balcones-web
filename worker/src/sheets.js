@@ -2,7 +2,23 @@ import { SignJWT, importPKCS8 } from 'jose';
 
 const ALCANCE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 const URL_TOKEN = 'https://oauth2.googleapis.com/token';
-const PESTANAS = ['Resumen', 'Cartera', 'Abonos', 'Egresos'];
+// Clave interna -> nombre real de la pestaña en la hoja.
+//
+// Las cuatro viven DENTRO del libro de control financiero, no en un archivo
+// aparte, y por eso llevan el prefijo «Tablero»: el libro ya tiene RESUMEN y
+// EGRESOS propios, y Sheets no admite dos pestañas con el mismo nombre.
+//
+// Empezaron en un archivo espejo separado, alimentado con IMPORTRANGE. Se
+// movieron acá porque IMPORTRANGE exige que una persona autorice la conexión
+// desde la interfaz —no se puede por API— y esa autorización se vuelve a pedir
+// cada vez que algo cambia de sitio. Un tablero que depende de un clic manual
+// para no quedarse en blanco es un punto de falla que no vale la pena.
+const PESTANAS = [
+  ['Resumen', 'Tablero Resumen'],
+  ['Cartera', 'Tablero Cartera'],
+  ['Abonos', 'Tablero Abonos'],
+  ['Egresos', 'Tablero Egresos']
+];
 
 export async function tokenDeAcceso(credenciales, { fetchImpl = fetch, ahora = new Date() } = {}) {
   const llave = await importPKCS8(credenciales.private_key, 'RS256');
@@ -38,7 +54,7 @@ export async function tokenDeAcceso(credenciales, { fetchImpl = fetch, ahora = n
 }
 
 export async function leerEspejo({ fetchImpl = fetch, idHoja, tokenAcceso }) {
-  const rangos = PESTANAS.map(p => `ranges=${encodeURIComponent(p)}`).join('&');
+  const rangos = PESTANAS.map(([, real]) => `ranges=${encodeURIComponent(`'${real}'`)}`).join('&');
   // UNFORMATTED_VALUE: Sheets devuelve números de JSON en vez del texto ya formateado.
   // Sin esto, una hoja en locale en_US mandaba "1,234.56" y había que adivinar el formato,
   // que es de donde salían los números equivocados y callados.
@@ -57,11 +73,11 @@ export async function leerEspejo({ fetchImpl = fetch, idHoja, tokenAcceso }) {
     );
   }
   const crudo = {};
-  PESTANAS.forEach((p, i) => {
+  PESTANAS.forEach(([clave, real], i) => {
     if (!valueRanges[i]) {
-      throw new Error(`La hoja llegó incompleta: no vino el rango de la pestaña ${p}.`);
+      throw new Error(`La hoja llegó incompleta: no vino el rango de la pestaña ${real}.`);
     }
-    crudo[p] = valueRanges[i].values ?? [];
+    crudo[clave] = valueRanges[i].values ?? [];
   });
   return crudo;
 }
@@ -148,8 +164,8 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
   // devuelve igual. Mirando `length === 0` ese caso no avisaba, index.js guardaba
   // esa lectura en caché y borraba la última lectura buena justo cuando más falta
   // hace. Se mide sobre el cuerpo, que ya descarta el encabezado.
-  PESTANAS.forEach((p) => {
-    if (cuerpo(p).length === 0) avisos.push({ tipo: 'pestana-vacia', pestana: p });
+  PESTANAS.forEach(([clave]) => {
+    if (cuerpo(clave).length === 0) avisos.push({ tipo: 'pestana-vacia', pestana: clave });
   });
 
   const resumen = {
