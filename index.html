@@ -24,7 +24,11 @@
 <section id="disponibles">
   <h2 id="titular"></h2>
   <p id="subtitulo"></p>
-  <img src="img/mapa.jpg" alt="Mapa del loteo con los lotes disponibles en verde">
+  <div id="mapa" class="mapa-caja"></div>
+  <p class="leyenda">
+    <span><span class="muestra" data-estado="disponible"></span>Disponible</span>
+    <span><span class="muestra" data-estado="vendido"></span>Vendido</span>
+  </p>
   <div id="tarjetas" class="tarjetas"></div>
 </section>
 
@@ -54,9 +58,17 @@
 
 <script type="module">
   import { construirVistaVitrina } from './assets/js/vitrina.js';
+  import { pintarMapa } from './assets/js/mapa.js';
 
   const inv = await (await fetch('data/lotes.json')).json();
   const v = construirVistaVitrina(inv);
+
+  // El plano se inserta en el documento (no como <img>) porque el color de
+  // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
+  // entrar desde afuera.
+  const caja = document.getElementById('mapa');
+  caja.innerHTML = await (await fetch('img/mapa.svg')).text();
+  pintarMapa(caja.querySelector('svg'), inv);
 
   document.getElementById('titular').textContent = v.titular;
   document.getElementById('subtitulo').textContent = v.subtitulo;

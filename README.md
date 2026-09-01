@@ -23,11 +23,11 @@ error; nunca ceros.
 ```
 index.html            la vitrina
 socios/index.html     el tablero privado
-assets/js/            módulos ES compartidos (formato, inventario, vitrina, tablero, config)
+assets/js/            módulos ES compartidos (formato, inventario, vitrina, mapa, tablero, config)
 assets/css/           una sola hoja de estilos
 data/lotes.json       el inventario: la única fuente de áreas, estados y precio del m²
-img/                  logo, portada, mapa, favicons
-herramientas/         scripts de preparación de imágenes (Python, se corren a mano)
+img/                  logo, portada, plano de lotes (SVG), favicons
+herramientas/         scripts de preparación de imágenes y del plano (Python, a mano)
 test/                 pruebas del sitio
 worker/               el Worker de Cloudflare del tablero
 worker/test/          pruebas del Worker
@@ -54,25 +54,33 @@ Casi todo se actualiza solo. En `data/lotes.json` se le cambia el `estado` al lo
 de `disponible` a `vendido`, y con eso la vitrina recalcula el titular, el área
 disponible y el listado. **El precio nunca se escribe:** sale de `área × precioM2`.
 
-Lo único que **no** se actualiza solo es el plano, `img/mapa.jpg`, porque el color
-verde y gris de cada lote vive dentro de la imagen. No se puede pintar desde los
-datos: el plano del brochure trae los lotes vecinos del mismo color fusionados en
-una sola mancha —el Sector 1 tiene 11 lotes y solo 4 manchas—, así que no hay
-geometría individual que recolorear.
+**El plano también.** `img/mapa.svg` trae solo la geometría de los 14 lotes, sacada
+del CAD del arquitecto: un `<path>` por lote con su `data-lote`, y ni un color ni un
+número ni un área escritos adentro. Eso lo pone `assets/js/mapa.js` leyendo el mismo
+`data/lotes.json`. Cambiado el estado, el lote cambia de color solo.
 
-Para que eso no se vuelva una mentira en pantalla, `img/mapa-estado.json` guarda con
-qué inventario se generó el plano, y una prueba compara las dos cosas. Si se vende un
-lote y no se regenera el plano, **la suite falla** y dice cuál lote quedó mal, en vez
-de que el sitio siga mostrando en verde algo que ya tiene dueño.
+Hasta agosto de 2026 el plano era un JPG recortado del brochure con los colores
+quemados: había que rehacer el brochure y regenerar la imagen a mano, y mientras
+tanto el sitio podía mostrar en verde un lote con dueño. Esa clase de defecto ya no
+es posible, así que se fue con él la huella `img/mapa-estado.json` y la prueba que
+la comparaba.
 
-Regenerarlo, después de rehacer el plano en el brochure:
+Lo que sí sigue vigilado, en `test/mapa.test.js`: **el área que encierra cada
+polígono del SVG tiene que coincidir con la que declara `data/lotes.json`**, dentro
+del 1 %, y las sumas por sector tienen que dar los englobados de las escrituras
+(26.442 m² el Sector 1, 8.479 m² el Sector 2). Es el único amarre confiable entre el
+dibujo y el número comercial del lote — no el orden, no la posición. Este proyecto ya
+cruzó la numeración dos veces.
+
+El plano solo hay que regenerarlo si cambia la geometría (una subdivisión, un lote
+nuevo), no cuando se vende:
 
 ```bash
-BALCONES_MAPA_ORIGEN=<ruta al plano del brochure> python3 herramientas/preparar-mapa.py
+BALCONES_CAD_ORIGEN=<ruta al DWG del arquitecto> python3 herramientas/preparar-mapa.py
 ```
 
-Para que el plano se pinte solo desde `data/lotes.json` habría que partir de los
-planos del arquitecto, donde cada lote sí es un polígono propio.
+Hace falta `dwg2dxf` (`brew install libredwg`) y `ezdxf` (`pip install --user ezdxf`).
+El script aborta sin escribir nada si algún polígono no cuadra con su lote.
 
 ## Servir la vitrina
 
