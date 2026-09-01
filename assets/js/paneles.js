@@ -30,11 +30,42 @@ const ETIQUETA_ESTADO = {
   especie: 'En especie'
 };
 
+// A dónde lleva cada cifra de arriba.
+//
+// La regla es una sola: la tarjeta abre el panel donde ESE número está
+// desglosado, y lo deja en el estado en que se ve. Por eso «Vendido»,
+// «Abonado» y «Por cobrar» van las tres a los lotes colocados —los tres
+// números salen del mismo grupo de lotes—, y lo que las distingue es cuál de
+// las cifras del resumen se resalta al llegar.
+//
+// `resalta` es el rótulo EXACTO de una cifra de `construirTotalesLotes`. La
+// prueba «cada resalta existe en el grupo al que apunta» impide que un cambio
+// de rótulo allá deje estas tarjetas apuntando al vacío en silencio.
+//
+// Una etiqueta que no esté acá sale con `panel: null` y se dibuja como caja
+// quieta, no como botón muerto: si la hoja gana una fila nueva de resumen,
+// aparece sin ser clicable en vez de romper la fila entera.
+const DESTINO = {
+  'Vendido': { panel: 'lotes', grupo: 'vendidos', resalta: 'Valor total', pista: 'Ver los lotes colocados' },
+  'Abonado': { panel: 'lotes', grupo: 'vendidos', resalta: 'Abonado', pista: 'Ver lo abonado en los lotes colocados' },
+  'Por cobrar': { panel: 'lotes', grupo: 'vendidos', resalta: 'Saldo por cobrar', pista: 'Ver el saldo de los lotes colocados' },
+  'Disponible': { panel: 'lotes', grupo: 'sinVender', resalta: 'Valor de lista', pista: 'Ver los lotes sin vender' },
+  'Gastado en obra': { panel: 'gastos', grupo: null, resalta: null, pista: 'Ver en qué se ha gastado' },
+  'Caja': { panel: 'caja', grupo: null, resalta: null, pista: 'Ver el movimiento de la caja' }
+};
+
 export function construirCifras(resumen) {
-  return (resumen ?? []).map(r => ({
-    etiqueta: ROTULO_CORTO[r.etiqueta] ?? r.etiqueta,
-    texto: r.texto
-  }));
+  return (resumen ?? []).map(r => {
+    const d = DESTINO[r.etiqueta] ?? { panel: null, grupo: null, resalta: null, pista: null };
+    return {
+      etiqueta: ROTULO_CORTO[r.etiqueta] ?? r.etiqueta,
+      texto: r.texto,
+      panel: d.panel,
+      grupo: d.grupo,
+      resalta: d.resalta,
+      pista: d.pista
+    };
+  });
 }
 
 // ---- la ficha de un lote ------------------------------------------------

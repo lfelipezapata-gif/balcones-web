@@ -76,6 +76,59 @@ test('un cero de verdad sí se muestra como $0', () => {
   assert.equal(c.find(x => x.etiqueta === 'Caja').texto, '$0');
 });
 
+test('las seis cifras llevan a un panel, y las de cartera además a un grupo', () => {
+  const por = new Map(construirCifras(vistaDe().resumen).map(c => [c.etiqueta, c]));
+
+  assert.deepEqual(
+    [...por.values()].map(c => [c.etiqueta, c.panel, c.grupo]),
+    [
+      ['Vendido', 'lotes', 'vendidos'],
+      ['Abonado', 'lotes', 'vendidos'],
+      ['Por cobrar', 'lotes', 'vendidos'],
+      ['Inventario', 'lotes', 'sinVender'],
+      ['Obra', 'gastos', null],
+      ['Caja', 'caja', null]
+    ]);
+
+  // Las tres de cartera abren el mismo grupo. Lo único que las distingue al
+  // llegar es cuál cifra del resumen se resalta: si dos apuntaran a la misma,
+  // dos tarjetas distintas harían exactamente lo mismo.
+  const deCartera = ['Vendido', 'Abonado', 'Por cobrar'].map(e => por.get(e).resalta);
+  assert.equal(new Set(deCartera).size, 3, 'cada cifra de cartera resalta una distinta');
+
+  // Un botón sin texto de ayuda no dice a dónde va.
+  for (const c of por.values()) {
+    if (c.panel !== null) assert.ok(c.pista, `«${c.etiqueta}» quedó sin pista`);
+  }
+});
+
+test('lo que cada cifra manda a resaltar existe de verdad en el grupo al que apunta', () => {
+  // Los rótulos de `DESTINO` («Valor total», «Saldo por cobrar», …) son copias
+  // de los que arma `construirTotalesLotes`. Están en dos sitios y nada obliga
+  // a que coincidan: renombrar allá dejaría estas tarjetas resaltando el vacío
+  // sin que nada fallara. Esta prueba es la que obliga.
+  const grupos = new Map(construirTotalesLotes(vistaDe(), INV).map(g => [g.clave, g]));
+
+  for (const c of construirCifras(vistaDe().resumen)) {
+    if (c.resalta === null) continue;
+    const g = grupos.get(c.grupo);
+    assert.ok(g, `«${c.etiqueta}» apunta al grupo «${c.grupo}», que no existe`);
+    assert.ok(
+      g.cifras.some(x => x.etiqueta === c.resalta),
+      `«${c.etiqueta}» quiere resaltar «${c.resalta}», que no está en el grupo «${c.grupo}»`);
+  }
+});
+
+test('una fila de resumen que nadie previó sale sin destino, no como botón muerto', () => {
+  // Si la hoja gana una fila nueva, la cifra tiene que dibujarse igual pero sin
+  // prometer un panel que no existe.
+  const [nueva] = construirCifras([{ etiqueta: 'Un concepto nuevo', texto: '$1' }]);
+  assert.equal(nueva.etiqueta, 'Un concepto nuevo');
+  assert.equal(nueva.texto, '$1');
+  assert.equal(nueva.panel, null);
+  assert.equal(nueva.grupo, null);
+});
+
 // ---- el porcentaje pagado -----------------------------------------------
 
 test('el porcentaje pagado se redondea y se queda entre 0 y 100', () => {

@@ -120,8 +120,19 @@ function verPestana(tabActiva) {
     $(panel).hidden = !activa;
   }
 }
+// Apaga la marca de la tarjeta de arriba desde la que se llegó.
+//
+// Se llama cuando el socio toma el control por su cuenta —cambia de pestaña o
+// de filtro a mano—: desde ahí ya no está viendo lo que la tarjeta abrió, y
+// dejarla encendida diría que sí.
+function apagarCifras() {
+  for (const b of $('resumen').querySelectorAll('button.cifra-caja')) {
+    b.setAttribute('aria-pressed', 'false');
+  }
+}
+
 for (const [tab] of PESTANAS) {
-  $(tab).addEventListener('click', () => verPestana(tab));
+  $(tab).addEventListener('click', () => { apagarCifras(); verPestana(tab); });
 }
 
 /* --- el plano y la ficha ----------------------------------------------- */
@@ -216,14 +227,19 @@ async function montarPlano(vista) {
   // Nada de esto viene de la hoja de Google. Se escapa igual, sin excepción.
   const grupos = construirTotalesLotes(vista, inv);
 
-  function pintarTotales(g) {
+  // `resaltar` es el rótulo de la cifra que hay que marcar al llegar desde una
+  // tarjeta de arriba (ver DESTINO en assets/js/paneles.js). Se compara contra
+  // el rótulo del grupo, no contra una posición: si el orden de las cifras
+  // cambia, la marca sigue cayendo donde debe. Si no coincide con ninguna, no
+  // se marca nada — nunca se resalta una cifra equivocada.
+  function pintarTotales(g, resaltar = null) {
     if (!g.muestraResumen) {
       $('totales').innerHTML = '';
       $('totales').hidden = true;
       return;
     }
     const cifras = g.cifras.map(c => `
-      <div class="cifra-caja">
+      <div class="cifra-caja"${c.etiqueta === resaltar ? ' data-resaltada' : ''}>
         <span class="rot">${escapar(c.etiqueta)}</span>
         <span class="val${c.incompleto ? ' incompleto' : ''}">${escapar(c.texto)}</span>
       </div>`).join('');
@@ -233,7 +249,7 @@ async function montarPlano(vista) {
       (g.nota ? `<p class="totales-nota">${escapar(g.nota)}</p>` : '');
   }
 
-  function verGrupo(clave) {
+  function verGrupo(clave, resaltar = null) {
     const g = grupos.find(x => x.clave === clave) ?? grupos[0];
     const enElGrupo = new Set(g.lotes.map(String));
     const apagaAlgo = g.clave !== 'todos';
@@ -247,7 +263,7 @@ async function montarPlano(vista) {
       const rotulo = svg.querySelector(`.rotulo-lote[data-lote="${p.dataset.lote}"]`);
       if (rotulo) rotulo.toggleAttribute('data-atenuado', fuera);
     }
-    pintarTotales(g);
+    pintarTotales(g, resaltar);
   }
 
   // `g.clave` sale del vocabulario cerrado de paneles.js ('todos', 'vendidos',
@@ -256,11 +272,15 @@ async function montarPlano(vista) {
     <button type="button" class="filtro" data-grupo="${g.clave}"
             aria-pressed="false">${escapar(g.etiqueta)}</button>`).join('');
   for (const b of $('filtros').querySelectorAll('.filtro')) {
-    b.addEventListener('click', () => verGrupo(b.dataset.grupo));
+    b.addEventListener('click', () => { apagarCifras(); verGrupo(b.dataset.grupo); });
   }
   verGrupo('todos');
 
-  return avisos;
+  // `verGrupo` sale del plano porque las tarjetas de arriba lo necesitan para
+  // dejar el panel filtrado. Si el plano no se pudo dibujar, quien llame se
+  // queda sin él y las tarjetas solo cambian de pestaña: no hay lotes que
+  // filtrar.
+  return { avisos, verGrupo };
 }
 
 /* --- gastos ------------------------------------------------------------ */
@@ -479,17 +499,34 @@ async function cargar(credencial) {
 
   if (v.alerta) { $('alerta').textContent = v.alerta; $('alerta').hidden = false; }
 
-  $('resumen').innerHTML = construirCifras(v.resumen).map(c => `
-    <div class="cifra-caja">
-      <span class="rot">${c.etiqueta}</span><span class="val">${c.texto}</span>
-    </div>`).join('');
+  // Las seis cifras de arriba. Cada una es un botón que abre el panel donde
+  // ese número está desglosado; a dónde va cada cual lo decide `DESTINO` en
+  // assets/js/paneles.js, no este archivo.
+  //
+  // `c.panel` y `c.grupo` salen de ese vocabulario cerrado ('lotes', 'gastos',
+  // 'caja' · 'vendidos', 'sinVender') y por eso pueden ir dentro de un
+  // atributo. `c.etiqueta`, `c.texto` y `c.pista` se escapan igual: la
+  // etiqueta y la cifra vienen de la hoja de Google.
+  const cifras = construirCifras(v.resumen);
+  $('resumen').innerHTML = cifras.map((c, i) => {
+    const cuerpoCifra =
+      `<span class="rot">${escapar(c.etiqueta)}</span><span class="val">${escapar(c.texto)}</span>`;
+    // Sin destino conocido se queda como caja quieta. Un botón que no lleva a
+    // ninguna parte es peor que un rótulo: promete algo que no cumple.
+    return c.panel === null
+      ? `<div class="cifra-caja">${cuerpoCifra}</div>`
+      : `<button type="button" class="cifra-caja" data-cifra="${i}"
+                 data-panel="${c.panel}"${c.grupo ? ` data-grupo="${c.grupo}"` : ''}
+                 aria-pressed="false" title="${escapar(c.pista)}">${cuerpoCifra}</button>`;
+  }).join('');
 
   // `pintarMapa` revienta a propósito si el plano y data/lotes.json dejan de
   // hablar del mismo conjunto de lotes. Sin este try/catch esa excepción se
   // llevaba por delante los gastos y los avisos, que no tienen nada que ver.
   let avisosDelPlano = [];
+  let verGrupoDelPlano = null;
   try {
-    avisosDelPlano = await montarPlano(v);
+    ({ avisos: avisosDelPlano, verGrupo: verGrupoDelPlano } = await montarPlano(v));
   } catch (e) {
     $('mapa').innerHTML = '';
     // Sin plano no hay nada que filtrar ni que resumir: los botones y el
@@ -501,6 +538,24 @@ async function cargar(credencial) {
     $('ficha').innerHTML =
       '<p class="plano-error">No se pudo dibujar el plano de lotes. Las cifras y los gastos de abajo sí están al día.</p>';
     avisosDelPlano = [`No se pudo dibujar el plano de lotes: ${String(e.message ?? e)}`];
+  }
+
+  // El clic de una tarjeta: abre su pestaña, deja el plano en el grupo que
+  // explica esa cifra y marca cuál de las cifras del grupo es la que se venía
+  // mirando. Sin plano, `verGrupoDelPlano` es null y solo cambia la pestaña.
+  for (const b of $('resumen').querySelectorAll('button.cifra-caja')) {
+    b.addEventListener('click', () => {
+      const c = cifras[Number(b.dataset.cifra)];
+      for (const otro of $('resumen').querySelectorAll('button.cifra-caja')) {
+        otro.setAttribute('aria-pressed', otro === b ? 'true' : 'false');
+      }
+      verPestana(`tab-${c.panel}`);
+      if (c.grupo && verGrupoDelPlano) verGrupoDelPlano(c.grupo, c.resalta);
+      // Se lleva a la vista la fila de pestañas, no el panel: así queda claro
+      // en cuál se cayó. En pantalla grande ya está visible y no se mueve nada.
+      document.querySelector('.pestanas')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   pintarGastos(v);

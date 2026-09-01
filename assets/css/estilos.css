@@ -202,6 +202,41 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 @media (min-width: 620px) { .tablero .cifras { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 900px) { .tablero .cifras { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 
+/* Cada cifra es un botón que abre el panel donde ese número está desglosado.
+   Se le quita todo lo que un <button> trae de fábrica —fuente propia, borde,
+   texto centrado, ancho al contenido— para que quede idéntica a la caja que
+   era antes: lo único que la delata es el cursor y lo que pasa al pasarle por
+   encima. La flechita del rótulo es el aviso de que hay algo debajo. */
+.tablero button.cifra-caja {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s;
+}
+.tablero button.cifra-caja .rot::after {
+  content: " ›";
+  color: #b9b3a6;
+  font-weight: 700;
+}
+.tablero button.cifra-caja:hover { background: #f6f3ed; }
+.tablero button.cifra-caja:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: -2px;
+}
+/* La tarjeta desde la que se llegó al panel que está abierto. Se marca con el
+   verde de la marca en un filo a la izquierda y no invirtiendo la caja entera:
+   son seis cifras juntas y una caja verde entre cinco blancas se lee como
+   «esta cifra es distinta», que no es lo que dice. */
+.tablero button.cifra-caja[aria-pressed="true"] {
+  background: #f2f6f2;
+  box-shadow: inset 3px 0 0 var(--verde);
+}
+.tablero button.cifra-caja[aria-pressed="true"] .rot { color: var(--verde); }
+
 /* --- las pestañas ------------------------------------------------------ */
 .tablero .pestanas { display: flex; flex-wrap: wrap; gap: .5rem; }
 .tablero .pestana {
@@ -261,6 +296,14 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   border: 1px solid var(--borde);
   border-radius: 10px;
 }
+/* La cifra que venía mirando quien llegó desde una tarjeta de arriba: al pulsar
+   «Abonado» arriba, esta es la caja «Abonado» del grupo. Es lo único que
+   distingue las tres tarjetas de cartera, que abren las tres el mismo grupo. */
+.tablero .totales-cifras .cifra-caja[data-resaltada] {
+  border-color: var(--verde);
+  background: #f2f6f2;
+}
+.tablero .totales-cifras .cifra-caja[data-resaltada] .rot { color: var(--verde); }
 /* Un total sumado sobre lotes de los que la cartera no trae cifras. La marca ya
    viaja en el texto («+ 4 lotes sin cifras») y `.tablero .incompleto`, al final
    del archivo, le pone el ámbar. Lo que hay que corregir acá es la forma: su
