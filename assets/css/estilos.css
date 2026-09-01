@@ -222,6 +222,58 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 }
 
 /* --- pestaña «Los lotes» ----------------------------------------------- */
+
+/* El filtro de arriba del plano: todos, vendidos, sin vender. Más chico que
+   una pestaña —no cambia de sección, filtra la que ya está abierta— y con el
+   mismo verde de la marca para el que está puesto. */
+.tablero .filtros { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 .85rem; }
+.tablero .filtro {
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 600;
+  color: #4a4a44;
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  padding: .38rem .95rem;
+  cursor: pointer;
+}
+.tablero .filtro[aria-pressed="true"] {
+  background: var(--verde);
+  border-color: var(--verde);
+  color: #fff;
+}
+
+/* El resumen del grupo elegido: las mismas cajas blancas de las seis cifras de
+   la cabecera, pero sueltas y con su propio borde en vez de pegadas.
+   La cabecera las une con un `gap` de 1 px sobre un contenedor del color del
+   borde, y ese truco solo funciona cuando las cajas llenan la última fila. Acá
+   el número de cifras cambia con el grupo —cinco para los vendidos, tres para
+   los que faltan— y en 390 px, con dos columnas, la quinta dejaba media fila
+   vacía pintada de gris. Separadas, la fila que queda corta no se nota. */
+.tablero .totales { margin: 0 0 1.1rem; }
+.tablero .totales-cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: .5rem;
+}
+.tablero .totales-cifras .cifra-caja {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+}
+/* Un total sumado sobre lotes de los que la cartera no trae cifras. La marca ya
+   viaja en el texto («+ 4 lotes sin cifras») y `.tablero .incompleto`, al final
+   del archivo, le pone el ámbar. Lo que hay que corregir acá es la forma: su
+   `text-align: right` desalinea la cifra en una caja cuyo rótulo va a la
+   izquierda, y su `display: inline-block` no le gana al `block` de `.val`, así
+   que el bloque ámbar se estiraba a todo el ancho de la caja. */
+.tablero .cifra-caja .val.incompleto {
+  display: inline-block;
+  text-align: left;
+  font-size: .82rem;
+}
+.tablero .totales-nota { margin: .6rem 0 0; font-size: .85rem; color: #6b6b6b; }
+
 .tablero .columnas { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 860px) {
   .tablero .columnas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
@@ -240,6 +292,25 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .tablero .mapa .lote:hover { stroke: var(--dorado); stroke-width: 1.6; }
 .tablero .mapa .lote:focus { outline: none; }
 .tablero .mapa .lote:focus-visible { stroke: var(--dorado); stroke-width: 2.4; }
+/* Un lote que el filtro de arriba dejó por fuera. Se APAGA, no se esconde: el
+   polígono conserva su borde blanco y su área, y el rótulo se sigue leyendo.
+   Es un plano — si al filtrar desaparecieran lotes, dejaría de ser el mismo
+   terreno y nadie podría ubicar lo que sí quedó.
+
+   Va con colores propios y no con `opacity`: bajarle la opacidad a un lote gris
+   sobre el panel claro lo borra —contorno incluido— y ahí sí se pierde el
+   plano. Cada estado conserva su color, apagado: el disponible sigue en verde
+   pálido y el colocado en gris, para que la leyenda de abajo siga diciendo la
+   verdad mientras hay un filtro puesto.
+
+   El `:not([data-seleccionado])` es lo que deja que el lote abierto siga
+   dorado aunque el filtro lo apague: su ficha está a la vista y perderlo de
+   vista al cambiar de filtro es desorientador. Sin el `:not`, estas reglas le
+   ganarían por especificidad. */
+.tablero .mapa .lote[data-atenuado]:not([data-seleccionado]) { fill: #dedcd4; }
+.tablero .mapa .lote[data-atenuado][data-estado="disponible"]:not([data-seleccionado]) { fill: #cfe0d3; }
+.tablero .mapa .rotulo-lote[data-atenuado]:not([data-seleccionado]) .numero { fill: #a7a89f; }
+.tablero .mapa .rotulo-lote[data-atenuado]:not([data-seleccionado]) .area { fill: #b6b7ae; }
 /* Cuatro clases contra las tres de `.mapa .lote[data-estado="disponible"]`:
    el dorado del seleccionado gana sobre el verde del disponible. */
 .tablero .mapa .lote[data-seleccionado] { fill: var(--dorado); stroke: #fff; }

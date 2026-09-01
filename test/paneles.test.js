@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { construirVistaTablero } from '../assets/js/tablero.js';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
-  mencionaVencido, porcentajePagado
+  construirTotalesLotes, mencionaVencido, porcentajePagado
 } from '../assets/js/paneles.js';
 
 const INV = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
@@ -318,6 +318,201 @@ test('ningún valor de ninguna ficha sale con HTML crudo', () => {
   for (const f of v.fichas) {
     for (const x of f.filas) assert.doesNotMatch(x.valor, /<img|<svg|<script/, `${f.n}/${x.etiqueta}`);
     if (f.calendario) assert.doesNotMatch(f.calendario.texto, /<img|<svg|<script/);
+  }
+});
+
+// ---- los totales por grupo del plano ------------------------------------
+//
+// El filtro de la pestaña «Los lotes»: todos, vendidos y sin vender. Los
+// números de abajo son los del inventario de verdad (data/lotes.json) porque
+// esa es media prueba: el grupo «Sin vender» tiene que dar la misma cifra que
+// la vitrina pública anuncia y que la cabecera muestra en «Inventario».
+
+// La cartera completa de los seis lotes que el plano da por vendidos. Cifras
+// de juguete, iguales entre sí para que el total se pueda verificar de cabeza.
+const CARTERA_COMPLETA = [1, 3, 4, 5, 10, 14].map(lote => ({
+  lote, comprador: `Comprador de prueba ${lote}`, estado: 'Promesa firmada',
+  precio: 200000000, abonado: 50000000, saldo: 150000000,
+  proximaCuotaFecha: '2027-02-19', proximaCuotaValor: 10000000, abonos: []
+}));
+const TABLERO_COMPLETO = { ...TABLERO, cartera: CARTERA_COMPLETA };
+
+const gruposDe = (t = TABLERO, inv = INV) => {
+  const g = construirTotalesLotes(vistaDe(t), inv);
+  return { lista: g, por: Object.fromEntries(g.map(x => [x.clave, x])) };
+};
+const cifrasPorEtiqueta = (grupo) =>
+  Object.fromEntries(grupo.cifras.map(c => [c.etiqueta, c]));
+
+test('son tres grupos, en el orden de los botones y con sus rótulos', () => {
+  const { lista } = gruposDe();
+  assert.deepEqual(lista.map(g => g.clave), ['todos', 'vendidos', 'sinVender']);
+  assert.deepEqual(lista.map(g => g.etiqueta), ['Todos', 'Vendidos', 'Sin vender']);
+});
+
+test('«Todos» se queda como está hoy: todos los lotes y ningún resumen', () => {
+  const { por } = gruposDe();
+  assert.equal(por.todos.muestraResumen, false);
+  assert.deepEqual(por.todos.cifras, []);
+  assert.equal(por.todos.nota, null);
+  assert.equal(por.todos.conteo, INV.lotes.length);
+  assert.deepEqual(por.todos.lotes, INV.lotes.map(l => l.n).sort((a, b) => a - b));
+});
+
+test('cada lote del plano cae en un grupo y en uno solo', () => {
+  const { por } = gruposDe();
+  const juntos = [...por.vendidos.lotes, ...por.sinVender.lotes].sort((a, b) => a - b);
+  assert.deepEqual(juntos, por.todos.lotes, 'ningún lote puede quedarse por fuera ni contarse dos veces');
+});
+
+test('el grupo «Sin vender» da la misma cifra que la vitrina y la cabecera', () => {
+  const { por } = gruposDe();
+  const c = cifrasPorEtiqueta(por.sinVender);
+  assert.equal(por.sinVender.conteo, 7);
+  assert.equal(por.sinVender.areaTotal, 16668);
+  assert.equal(c.Lotes.texto, '7');
+  assert.equal(c['Área'].texto, '16.668 m²');
+  // La misma cifra que muestra «Inventario» en la cabecera: 16.668 m² por el
+  // valor del metro. Si esta prueba cambia sin que cambie data/lotes.json, el
+  // tablero y la vitrina se separaron.
+  assert.equal(c['Valor de lista'].texto, '$1.833.480.000');
+  assert.equal(c['Valor de lista'].incompleto, false);
+  assert.match(por.sinVender.nota, /precio de lista/i);
+});
+
+test('el grupo «Vendidos» cuenta el lote en especie, con su área', () => {
+  const { por } = gruposDe(TABLERO_COMPLETO);
+  const c = cifrasPorEtiqueta(por.vendidos);
+  // Los seis con cartera más el lote en especie, que ya tiene dueño.
+  assert.equal(por.vendidos.conteo, 7);
+  assert.ok(por.vendidos.lotes.includes(2), 'el lote en especie no está sin vender');
+  assert.equal(por.sinVender.lotes.includes(2), false);
+  assert.equal(por.vendidos.areaTotal, 18253);
+  assert.equal(c.Lotes.texto, '7');
+  assert.equal(c['Área'].texto, '18.253 m²');
+});
+
+test('el lote en especie no infla ninguna cifra de dinero ni marca el total como incompleto', () => {
+  const { por } = gruposDe(TABLERO_COMPLETO);
+  const c = cifrasPorEtiqueta(por.vendidos);
+  // Seis lotes con cartera, no siete: por el lote en especie no entró un peso.
+  assert.equal(c['Valor total'].texto, '$1.200.000.000');
+  assert.equal(c.Abonado.texto, '$300.000.000');
+  assert.equal(c['Saldo por cobrar'].texto, '$900.000.000');
+  for (const cifra of por.vendidos.cifras) {
+    assert.equal(cifra.incompleto, false, `${cifra.etiqueta} no tiene por qué estar marcada`);
+    assert.doesNotMatch(cifra.texto, /sin cifras/);
+  }
+  // Y se dice, porque si no la resta no cuadra contra los siete lotes.
+  assert.match(por.vendidos.nota, /especie/i);
+  assert.match(por.vendidos.nota, /no entró dinero/i);
+});
+
+test('un vendido sin fila en la cartera deja las tres cifras marcadas, pegado al número', () => {
+  // El TABLERO base solo trae cartera de los lotes 1 y 5: los otros cuatro
+  // vendidos no tienen cifras y el total queda corto de verdad.
+  const { por } = gruposDe();
+  const c = cifrasPorEtiqueta(por.vendidos);
+  assert.equal(por.vendidos.conteo, 7);
+  for (const etiqueta of ['Valor total', 'Abonado', 'Saldo por cobrar']) {
+    assert.equal(c[etiqueta].incompleto, true, etiqueta);
+    assert.match(c[etiqueta].texto, /\+ 4 lotes sin cifras/);
+  }
+  assert.match(c['Valor total'].texto, /^\$300\.000\.000 \+/, 'suma los dos que sí tienen fila');
+  assert.notEqual(c['Valor total'].texto, '$300.000.000');
+});
+
+test('un solo lote sin cifras se cuenta en singular', () => {
+  const casiCompleto = { ...TABLERO, cartera: CARTERA_COMPLETA.slice(0, 5) };
+  const { por } = gruposDe(casiCompleto);
+  assert.match(cifrasPorEtiqueta(por.vendidos)['Valor total'].texto, /\+ 1 lote sin cifras/);
+});
+
+test('sin cartera, las cifras de plata de los vendidos salen en raya y jamás en $0', () => {
+  const { por } = gruposDe({ ...TABLERO, cartera: [] });
+  const c = cifrasPorEtiqueta(por.vendidos);
+  for (const etiqueta of ['Valor total', 'Abonado', 'Saldo por cobrar']) {
+    assert.equal(c[etiqueta].texto, '—', etiqueta);
+    assert.notEqual(c[etiqueta].texto, '$0');
+  }
+  // El conteo y el área sí se saben: salen del plano, no de la hoja.
+  assert.equal(c.Lotes.texto, '7');
+  assert.equal(c['Área'].texto, '18.253 m²');
+  // Y el grupo sin vender no depende de la hoja para nada.
+  assert.equal(cifrasPorEtiqueta(por.sinVender)['Valor de lista'].texto, '$1.833.480.000');
+});
+
+test('un saldo en null marca la cifra del saldo y deja las otras dos completas', () => {
+  const conNull = {
+    ...TABLERO,
+    cartera: CARTERA_COMPLETA.map(c => c.lote === 3 ? { ...c, saldo: null } : c)
+  };
+  const c = cifrasPorEtiqueta(gruposDe(conNull).por.vendidos);
+  assert.equal(c['Saldo por cobrar'].incompleto, true);
+  assert.match(c['Saldo por cobrar'].texto, /\+ 1 lote sin cifras/);
+  assert.notEqual(c['Saldo por cobrar'].texto, '$750.000.000');
+  assert.equal(c['Valor total'].incompleto, false);
+  assert.equal(c['Valor total'].texto, '$1.200.000.000');
+  assert.equal(c.Abonado.incompleto, false);
+});
+
+test('un abonado de $0 real sí suma como cero y no ensucia la marca', () => {
+  const enCero = {
+    ...TABLERO,
+    cartera: CARTERA_COMPLETA.map(c => ({ ...c, abonado: 0 }))
+  };
+  const c = cifrasPorEtiqueta(gruposDe(enCero).por.vendidos);
+  assert.equal(c.Abonado.texto, '$0');
+  assert.equal(c.Abonado.incompleto, false);
+});
+
+// El caso feo: se vendió todo y el filtro «Sin vender» se queda sin nada.
+const INV_TODO_VENDIDO = {
+  ...INV,
+  lotes: INV.lotes.map(l => ({ ...l, estado: l.estado === 'disponible' ? 'vendido' : l.estado }))
+};
+
+test('«Sin vender» sin ningún lote lo dice con palabras, no con una fila de ceros', () => {
+  const { por } = gruposDe(TABLERO_COMPLETO, INV_TODO_VENDIDO);
+  assert.equal(por.sinVender.conteo, 0);
+  assert.deepEqual(por.sinVender.lotes, []);
+  assert.equal(por.sinVender.areaTotal, 0);
+  assert.deepEqual(por.sinVender.cifras, [], 'un grupo vacío no tiene cifras que mostrar');
+  assert.equal(por.sinVender.nota, 'No queda ningún lote sin vender.');
+  assert.equal(por.vendidos.conteo, INV.lotes.length, 'todos quedaron del otro lado');
+});
+
+test('«Vendidos» sin ningún lote tampoco inventa un $0', () => {
+  const nadaVendido = { ...INV, lotes: INV.lotes.map(l => ({ ...l, estado: 'disponible' })) };
+  const { por } = gruposDe(TABLERO, nadaVendido);
+  assert.equal(por.vendidos.conteo, 0);
+  assert.deepEqual(por.vendidos.cifras, []);
+  assert.equal(por.vendidos.nota, 'Todavía no hay ningún lote vendido.');
+  assert.equal(por.sinVender.conteo, INV.lotes.length);
+});
+
+test('un inventario inválido no arma totales a medias: revienta', () => {
+  assert.throws(() => construirTotalesLotes(vistaDe(), { precioM2: 0, lotes: [] }));
+  assert.throws(() => construirTotalesLotes(vistaDe(), null));
+});
+
+test('ningún texto de la hoja se cuela en los totales', () => {
+  // Las etiquetas y las notas son literales del código y las cifras salen de
+  // números. Una carga de inyección en la cartera no tiene por dónde entrar.
+  const CARGA = `<img src=x onerror=alert(1)>'"`;
+  const malicioso = {
+    ...TABLERO,
+    cartera: [{
+      lote: 1, comprador: CARGA, estado: CARGA, promesa: CARGA,
+      precio: 1, abonado: 1, saldo: 1,
+      proximaCuotaFecha: CARGA, proximaCuotaValor: 1, abonos: []
+    }]
+  };
+  for (const g of construirTotalesLotes(vistaDe(malicioso), INV)) {
+    const textos = [g.etiqueta, g.nota, ...g.cifras.flatMap(c => [c.etiqueta, c.texto])];
+    for (const t of textos.filter(Boolean)) {
+      assert.doesNotMatch(t, /<img|<svg|<script|&lt;/, `salió texto de la hoja: ${t}`);
+    }
   }
 });
 

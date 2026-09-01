@@ -42,6 +42,11 @@
   </nav>
 
   <section id="panel-lotes" role="tabpanel" aria-labelledby="tab-lotes">
+    <!-- Los tres botones y el resumen del grupo elegido los llena
+         `montarPlano` desde `construirTotalesLotes`, para que el rótulo y la
+         clave de cada grupo vivan en un solo lado. -->
+    <div id="filtros" class="filtros" role="group" aria-label="Qué lotes ver"></div>
+    <div id="totales" class="totales" hidden></div>
     <div class="columnas">
       <div class="plano">
         <div id="mapa" class="mapa-caja"></div>
@@ -71,7 +76,8 @@
 import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js';
 import { construirVistaTablero, escapar } from '../assets/js/tablero.js';
 import {
-  construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios
+  construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
+  construirTotalesLotes
 } from '../assets/js/paneles.js';
 import { pintarMapa } from '../assets/js/mapa.js';
 
@@ -189,6 +195,64 @@ async function montarPlano(vista) {
   });
 
   if (inicial !== null) seleccionar(inicial);
+
+  /* --- el filtro de arriba del plano ------------------------------------ */
+  //
+  // Tres botones: todos, vendidos y sin vender. Al elegir uno, los lotes que
+  // no entran se APAGAN, no se esconden — esto es un plano, y un plano al que
+  // le faltan lotes ya no es el mismo terreno. Siguen clicables y su ficha
+  // sigue abriéndose igual, así que el filtro nunca deja un lote fuera de
+  // alcance.
+  //
+  // Todo lo que se pinta acá sale de `construirTotalesLotes`: etiquetas que son
+  // literales de assets/js/paneles.js y cifras formateadas a partir de números.
+  // Nada de esto viene de la hoja de Google. Se escapa igual, sin excepción.
+  const grupos = construirTotalesLotes(vista, inv);
+
+  function pintarTotales(g) {
+    if (!g.muestraResumen) {
+      $('totales').innerHTML = '';
+      $('totales').hidden = true;
+      return;
+    }
+    const cifras = g.cifras.map(c => `
+      <div class="cifra-caja">
+        <span class="rot">${escapar(c.etiqueta)}</span>
+        <span class="val${c.incompleto ? ' incompleto' : ''}">${escapar(c.texto)}</span>
+      </div>`).join('');
+    $('totales').hidden = false;
+    $('totales').innerHTML =
+      (cifras ? `<div class="totales-cifras">${cifras}</div>` : '') +
+      (g.nota ? `<p class="totales-nota">${escapar(g.nota)}</p>` : '');
+  }
+
+  function verGrupo(clave) {
+    const g = grupos.find(x => x.clave === clave) ?? grupos[0];
+    const enElGrupo = new Set(g.lotes.map(String));
+    const apagaAlgo = g.clave !== 'todos';
+
+    for (const b of $('filtros').querySelectorAll('.filtro')) {
+      b.setAttribute('aria-pressed', b.dataset.grupo === g.clave ? 'true' : 'false');
+    }
+    for (const p of poligonos) {
+      const fuera = apagaAlgo && !enElGrupo.has(p.dataset.lote);
+      p.toggleAttribute('data-atenuado', fuera);
+      const rotulo = svg.querySelector(`.rotulo-lote[data-lote="${p.dataset.lote}"]`);
+      if (rotulo) rotulo.toggleAttribute('data-atenuado', fuera);
+    }
+    pintarTotales(g);
+  }
+
+  // `g.clave` sale del vocabulario cerrado de paneles.js ('todos', 'vendidos',
+  // 'sinVender') y por eso puede ir dentro de un atributo.
+  $('filtros').innerHTML = grupos.map(g => `
+    <button type="button" class="filtro" data-grupo="${g.clave}"
+            aria-pressed="false">${escapar(g.etiqueta)}</button>`).join('');
+  for (const b of $('filtros').querySelectorAll('.filtro')) {
+    b.addEventListener('click', () => verGrupo(b.dataset.grupo));
+  }
+  verGrupo('todos');
+
   return avisos;
 }
 
@@ -363,6 +427,12 @@ async function cargar(credencial) {
     avisosDelPlano = await montarPlano(v);
   } catch (e) {
     $('mapa').innerHTML = '';
+    // Sin plano no hay nada que filtrar ni que resumir: los botones y el
+    // resumen se van con él, en vez de quedar mandando sobre un plano que ya no
+    // está.
+    $('filtros').innerHTML = '';
+    $('totales').innerHTML = '';
+    $('totales').hidden = true;
     $('ficha').innerHTML =
       '<p class="plano-error">No se pudo dibujar el plano de lotes. Las cifras y los gastos de abajo sí están al día.</p>';
     avisosDelPlano = [`No se pudo dibujar el plano de lotes: ${String(e.message ?? e)}`];

@@ -203,6 +203,187 @@ export function construirVistaLotes(vista, inventario) {
   return { fichas, inicial, avisos };
 }
 
+// ---- los totales por grupo del plano ------------------------------------
+
+// A qué grupo de los tres botones pertenece cada estado del plano.
+//
+// «especie» va con los VENDIDOS y no con los que siguen sin vender: ese lote ya
+// tiene dueño, y así lo cuenta también la vitrina pública, que separa por
+// `estado !== 'disponible'` (`resumenInventario` en assets/js/inventario.js). Si
+// acá se agrupara distinto, el tablero y la página de venta estarían diciendo
+// dos cosas sobre el mismo lote. Lo que un lote en especie NO hace es aportar
+// plata: de eso se encarga `sumarPlataDeLotes`, que lo deja por fuera de las
+// tres cifras de dinero sin marcar el total como incompleto.
+//
+// Estos tres estados son los únicos que `validarInventario` deja pasar, así que
+// ningún lote se queda sin grupo.
+const GRUPO_DE_ESTADO = {
+  vendido: 'vendidos',
+  especie: 'vendidos',
+  disponible: 'sinVender'
+};
+
+const ETIQUETA_GRUPO = {
+  todos: 'Todos',
+  vendidos: 'Vendidos',
+  sinVender: 'Sin vender'
+};
+
+const areaDe = (lotes) => lotes.reduce((t, l) => t + l.area, 0);
+
+// Suma una columna de plata de la cartera sobre los lotes de un grupo.
+//
+// Separa dos cosas que se parecen y no son lo mismo:
+//   - el lote en especie no aporta y NO deja el total corto. Por él nunca entró
+//     un peso y eso ya se sabe; contarlo como dato faltante sería marcar de
+//     incompleta, para siempre, una cifra que está completa.
+//   - el lote que el plano da por vendido y del que la cartera no trae fila SÍ
+//     deja el total corto. Ahí falta plata de verdad, y la marca viaja PEGADA a
+//     la cifra para que ninguna plantilla pueda mostrar el número sin mostrar
+//     que le falta algo.
+//
+// Sin ninguna cifra legible no hay $0 que enseñar —eso diría que no se ha
+// vendido nada— sino raya.
+function sumarPlataDeLotes(lotes, porLote, campo) {
+  let total = 0;
+  let legibles = 0;
+  let sinCifra = 0;
+
+  for (const l of lotes) {
+    if (l.estado === 'especie') continue;
+    const v = porLote.get(l.n)?.[campo];
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      total += v;
+      legibles++;
+    } else {
+      sinCifra++;
+    }
+  }
+
+  const cifra = pesos(total);
+  return {
+    total: legibles === 0 ? null : total,
+    sinCifra,
+    incompleto: sinCifra > 0,
+    texto: legibles === 0
+      ? '—'
+      : (sinCifra > 0
+        ? `${cifra} + ${sinCifra} ${sinCifra === 1 ? 'lote' : 'lotes'} sin cifras`
+        : cifra)
+  };
+}
+
+// Las dos cifras que todo grupo puede dar sin depender de la hoja: cuántos
+// lotes son y cuántos metros suman. Salen de data/lotes.json, que ya pasó por
+// `validarInventario`, así que nunca están incompletas.
+function cifrasDeConteo(lotes) {
+  return [
+    { etiqueta: 'Lotes', texto: String(lotes.length), incompleto: false },
+    { etiqueta: 'Área', texto: metros(areaDe(lotes)), incompleto: false }
+  ];
+}
+
+function baseDeGrupo(clave, lotes) {
+  return {
+    clave,
+    etiqueta: ETIQUETA_GRUPO[clave],
+    lotes: lotes.map(l => l.n),
+    conteo: lotes.length,
+    areaTotal: areaDe(lotes)
+  };
+}
+
+// «Todos» es el estado de siempre: no apaga ningún lote y no resume nada. Un
+// total que mezclara lo vendido con lo que está a la venta no significaría
+// nada — son plata cobrada y plata por vender.
+function grupoTodos(lotes) {
+  return { ...baseDeGrupo('todos', lotes), muestraResumen: false, cifras: [], nota: null };
+}
+
+function grupoVendidos(lotes, porLote) {
+  const base = { ...baseDeGrupo('vendidos', lotes), muestraResumen: true };
+
+  if (lotes.length === 0) {
+    return { ...base, cifras: [], nota: 'Todavía no hay ningún lote vendido.' };
+  }
+
+  const enEspecie = lotes.filter(l => l.estado === 'especie').length;
+  const plata = (etiqueta, campo) => {
+    const s = sumarPlataDeLotes(lotes, porLote, campo);
+    return { etiqueta, texto: s.texto, incompleto: s.incompleto };
+  };
+
+  return {
+    ...base,
+    cifras: [
+      ...cifrasDeConteo(lotes),
+      plata('Valor total', 'precio'),
+      plata('Abonado', 'abonado'),
+      plata('Saldo por cobrar', 'saldo')
+    ],
+    // El lote en especie tiene que explicarse solo: cuenta entre los vendidos
+    // pero no aparece en ninguna de las tres cifras de plata, y sin esta línea
+    // eso se lee como una resta que no cuadra.
+    nota: enEspecie === 0
+      ? null
+      : (enEspecie === 1
+        ? 'Incluye 1 lote entregado como pago en especie: cuenta en los lotes y en el área, pero por él no entró dinero.'
+        : `Incluye ${enEspecie} lotes entregados como pago en especie: cuentan en los lotes y en el área, pero por ellos no entró dinero.`)
+  };
+}
+
+// Lo que falta por vender, a precio de lista: área por el valor del metro. No
+// depende de la hoja de Google, así que nunca queda incompleto — y es el mismo
+// cálculo con el que la vitrina pública anuncia cada lote.
+function grupoSinVender(lotes, precioM2) {
+  const base = { ...baseDeGrupo('sinVender', lotes), muestraResumen: true };
+
+  if (lotes.length === 0) {
+    return { ...base, cifras: [], nota: 'No queda ningún lote sin vender.' };
+  }
+
+  return {
+    ...base,
+    cifras: [
+      ...cifrasDeConteo(lotes),
+      { etiqueta: 'Valor de lista', texto: pesos(areaDe(lotes) * precioM2), incompleto: false }
+    ],
+    nota: `A precio de lista: el área de cada lote por ${pesos(precioM2)} el metro. Es el mismo cálculo de la vitrina pública.`
+  };
+}
+
+/**
+ * Los tres grupos del filtro de la pestaña «Los lotes», en el orden de los
+ * botones: todos, vendidos, sin vender.
+ *
+ * @param vista       lo que devuelve `construirVistaTablero` (texto YA escapado)
+ * @param inventario  el JSON de data/lotes.json
+ *
+ * Cada grupo trae los números de sus lotes —con eso el plano apaga los demás—,
+ * su resumen ya formateado y una nota cuando hay algo que explicar. Ni un solo
+ * texto de la hoja de Google entra a lo que sale de acá: las etiquetas son
+ * literales de este archivo y las cifras salen de números, no de celdas.
+ *
+ * Los lotes se agrupan por el ESTADO del plano, no por tener fila en la
+ * cartera. Es a propósito: el plano es la única fuente que ve el socio, y un
+ * lote vendido cuya fila todavía no llegó tiene que contarse igual —con su
+ * área— y dejar marcadas de incompletas las cifras de plata, en vez de
+ * desaparecer del conteo.
+ */
+export function construirTotalesLotes(vista, inventario) {
+  validarInventario(inventario);
+
+  const porLote = new Map((vista?.cartera ?? []).map(c => [c.lote, c]));
+  const lotes = [...inventario.lotes].sort((a, b) => a.n - b.n);
+  const del = (clave) => lotes.filter(l => GRUPO_DE_ESTADO[l.estado] === clave);
+
+  return [
+    grupoTodos(lotes),
+    grupoVendidos(del('vendidos'), porLote),
+    grupoSinVender(del('sinVender'), inventario.precioM2)
+  ];
+}
+
 // ---- el panel de gastos -------------------------------------------------
 
 /**
