@@ -3,11 +3,15 @@ main = "src/index.js"
 compatibility_date = "2026-08-31"
 
 [vars]
-# Se llenan cuando exista el proyecto de Google Cloud. Mientras GOOGLE_CLIENT_ID
-# esté vacío, el Worker responde 500 de configuración a todo el mundo — a
-# propósito: con el identificador vacío, Google apaga la verificación de
+# Proyecto de Google Cloud `balcones-507302` (número 891645522580) — el mismo
+# donde vive la cuenta de servicio. El prefijo numérico del ID de cliente ES el
+# número de proyecto: si no coincide con el de la cuenta de servicio, están en
+# proyectos distintos y algo va a fallar.
+#
+# Si esto queda vacío, el Worker responde 500 de configuración a todo el mundo,
+# a propósito: con el identificador vacío Google apaga la verificación de
 # destinatario y entraría cualquiera. Ver worker/src/auth.js.
-GOOGLE_CLIENT_ID = "145625987680-pt8bss04rarfnnocghl7gpkjm09969oe.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = "891645522580-n28qonptovkp695lg3pu0p7nchgt5nfd.apps.googleusercontent.com"
 # El libro de control financiero. Las cuatro pestañas «Tablero …» viven adentro,
 # con fórmulas locales: no hay IMPORTRANGE y por lo tanto no hay autorización
 # manual que se caiga. Ver el comentario de PESTANAS en src/sheets.js.
