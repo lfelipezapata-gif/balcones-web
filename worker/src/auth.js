@@ -93,7 +93,18 @@ export async function autorizar(token, { clientId, jwks, listaCruda }) {
   }
   const { email } = await verificarIdentidad(token, { clientId, jwks });
   if (!estaAutorizado(email, listaCruda)) {
-    throw new ErrorAuth('No tenés acceso a este tablero.', 403);
+    // El mensaje dice CON QUÉ CORREO entró, y es la diferencia entre un rechazo
+    // que se resuelve solo y uno que hay que venir a preguntar. La causa casi
+    // siempre es la misma: el navegador está en otra cuenta de Google, no en la
+    // que el socio pasó. Sin el correo en pantalla eso es indistinguible de
+    // «me olvidaron de la lista», y las dos se arreglan al revés.
+    //
+    // Enseñar ese correo no cuenta nada: el token ya lo verificó Google —firma,
+    // destinatario, vencimiento y `email_verified`—, así que quien lo está
+    // leyendo es el dueño de esa dirección. Se la devolvemos a él y a nadie más.
+    throw new ErrorAuth(
+      `Entraste con ${email} y ese correo no está en la lista del tablero. ` +
+      'Si no es el que pasaste, salí de esa cuenta de Google y entrá con la otra.', 403);
   }
   return { email };
 }

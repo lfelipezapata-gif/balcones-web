@@ -57,10 +57,14 @@ test('sin token responde 401', async () => {
   assert.match((await r.json()).error, /sesión/i);
 });
 
-test('correo fuera de lista responde 403 con mensaje humano', async () => {
+test('correo fuera de lista responde 403 diciendo CON CUÁL entró', async () => {
+  // Sin el correo en pantalla, «me olvidaron de la lista» y «el navegador está
+  // en otra cuenta de Google» se ven idénticos, y se arreglan al revés.
   const r = await manejar(await pedir(await token('ajeno@ejemplo.com')), env, deps());
   assert.equal(r.status, 403);
-  assert.equal((await r.json()).error, 'No tenés acceso a este tablero.');
+  const { error } = await r.json();
+  assert.match(error, /ajeno@ejemplo\.com/, 'tiene que decir con qué correo entró');
+  assert.match(error, /cuenta de Google/i, 'y qué hacer si no es el suyo');
 });
 
 test('socio autorizado recibe el tablero', async () => {
@@ -211,5 +215,16 @@ test('SOCIOS_AUTORIZADOS vacío también responde 500', async () => {
 test('con la lista llena, un correo que no está en ella sigue recibiendo 403', async () => {
   const r = await manejar(await pedir(await token('ajeno@ejemplo.com')), env, deps());
   assert.equal(r.status, 403);
-  assert.equal((await r.json()).error, 'No tenés acceso a este tablero.');
+  assert.match((await r.json()).error, /ajeno@ejemplo\.com/);
+});
+
+test('el 403 solo devuelve el correo del que entró, y ningún otro de la lista', async () => {
+  // El mensaje enseña una dirección: la de quien está leyendo, que Google ya
+  // verificó como suya. La lista de los demás socios no puede asomarse ahí.
+  const r = await manejar(await pedir(await token('ajeno@ejemplo.com')), env, deps());
+  const { error } = await r.json();
+  for (const socio of env.SOCIOS_AUTORIZADOS.split(',').map(c => c.trim()).filter(Boolean)) {
+    assert.doesNotMatch(error, new RegExp(socio.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+      `se filtró «${socio}», que es de otro socio`);
+  }
 });
