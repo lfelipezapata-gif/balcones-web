@@ -9,9 +9,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { construirVistaTablero } from '../assets/js/tablero.js';
+import { pesos, metros } from '../assets/js/formato.js';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
-  construirTotalesLotes, construirVistaCaja, mencionaVencido, porcentajePagado
+  construirTotalesLotes, construirVistaCaja, construirDetalleCifra,
+  mencionaVencido, porcentajePagado
 } from '../assets/js/paneles.js';
 
 const INV = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
@@ -76,57 +78,48 @@ test('un cero de verdad sí se muestra como $0', () => {
   assert.equal(c.find(x => x.etiqueta === 'Caja').texto, '$0');
 });
 
-test('las seis cifras llevan a un panel, y las de cartera además a un grupo', () => {
-  const por = new Map(construirCifras(vistaDe().resumen).map(c => [c.etiqueta, c]));
-
-  assert.deepEqual(
-    [...por.values()].map(c => [c.etiqueta, c.panel, c.grupo]),
-    [
-      ['Vendido', 'lotes', 'vendidos'],
-      ['Abonado', 'lotes', 'vendidos'],
-      ['Por cobrar', 'lotes', 'vendidos'],
-      ['Inventario', 'lotes', 'sinVender'],
-      ['Obra', 'gastos', null],
-      ['Caja', 'caja', null]
-    ]);
-
-  // Las tres de cartera abren el mismo grupo. Lo único que las distingue al
-  // llegar es cuál cifra del resumen se resalta: si dos apuntaran a la misma,
-  // dos tarjetas distintas harían exactamente lo mismo.
-  const deCartera = ['Vendido', 'Abonado', 'Por cobrar'].map(e => por.get(e).resalta);
-  assert.equal(new Set(deCartera).size, 3, 'cada cifra de cartera resalta una distinta');
-
+test('cada cifra sabe qué listado abre, y con qué pista', () => {
+  const c = construirCifras(vistaDe().resumen);
+  assert.deepEqual(c.map(x => [x.etiqueta, x.clave]), [
+    ['Vendido', 'vendido'],
+    ['Abonado', 'abonado'],
+    ['Por cobrar', 'porCobrar'],
+    ['Inventario', 'disponible'],
+    ['Obra', 'obra'],
+    ['Caja', 'caja']
+  ]);
   // Un botón sin texto de ayuda no dice a dónde va.
-  for (const c of por.values()) {
-    if (c.panel !== null) assert.ok(c.pista, `«${c.etiqueta}» quedó sin pista`);
-  }
+  for (const x of c) assert.ok(x.pista, `«${x.etiqueta}» quedó sin pista`);
+  assert.equal(new Set(c.map(x => x.pista)).size, 6, 'seis pistas distintas, una por cifra');
 });
 
-test('lo que cada cifra manda a resaltar existe de verdad en el grupo al que apunta', () => {
-  // Los rótulos de `DESTINO` («Valor total», «Saldo por cobrar», …) son copias
-  // de los que arma `construirTotalesLotes`. Están en dos sitios y nada obliga
-  // a que coincidan: renombrar allá dejaría estas tarjetas resaltando el vacío
-  // sin que nada fallara. Esta prueba es la que obliga.
-  const grupos = new Map(construirTotalesLotes(vistaDe(), INV).map(g => [g.clave, g]));
-
+test('cada clave de cifra tiene de verdad un listado detrás', () => {
+  // Las seis claves y los seis listados están en dos sitios del archivo. Si se
+  // agrega una cifra y se olvida su listado, la tarjeta se dibuja pulsable y no
+  // abre nada. Esta prueba es la que obliga a que vayan juntos.
   for (const c of construirCifras(vistaDe().resumen)) {
-    if (c.resalta === null) continue;
-    const g = grupos.get(c.grupo);
-    assert.ok(g, `«${c.etiqueta}» apunta al grupo «${c.grupo}», que no existe`);
-    assert.ok(
-      g.cifras.some(x => x.etiqueta === c.resalta),
-      `«${c.etiqueta}» quiere resaltar «${c.resalta}», que no está en el grupo «${c.grupo}»`);
+    const d = construirDetalleCifra(c.clave, vistaDe(CON_CAJA), INV);
+    assert.ok(d, `«${c.etiqueta}» (${c.clave}) no tiene listado`);
+    assert.ok(d.titulo, `el listado de «${c.etiqueta}» no tiene título`);
+    assert.ok(d.columnas.length > 0, `el listado de «${c.etiqueta}» no tiene columnas`);
+    assert.ok(d.vacio, `el listado de «${c.etiqueta}» no dice qué mostrar si está vacío`);
+    for (const f of d.filas) {
+      assert.equal(f.celdas.length, d.columnas.length,
+        `en «${c.etiqueta}» una fila no tiene tantas celdas como columnas`);
+    }
   }
 });
 
-test('una fila de resumen que nadie previó sale sin destino, no como botón muerto', () => {
+test('una fila de resumen que nadie previó sale sin listado, no como botón muerto', () => {
   // Si la hoja gana una fila nueva, la cifra tiene que dibujarse igual pero sin
-  // prometer un panel que no existe.
+  // prometer un listado que no existe.
   const [nueva] = construirCifras([{ etiqueta: 'Un concepto nuevo', texto: '$1' }]);
   assert.equal(nueva.etiqueta, 'Un concepto nuevo');
   assert.equal(nueva.texto, '$1');
-  assert.equal(nueva.panel, null);
-  assert.equal(nueva.grupo, null);
+  assert.equal(nueva.clave, null);
+  assert.equal(nueva.pista, null);
+  assert.equal(construirDetalleCifra(null, vistaDe(), INV), null);
+  assert.equal(construirDetalleCifra('inventado', vistaDe(), INV), null);
 });
 
 // ---- el porcentaje pagado -----------------------------------------------
@@ -1259,4 +1252,184 @@ test('la apertura se ve como el subtotal: un corte, sin signo de entrada ni de s
   const ap = c.movimientos.find(m => m.tipo === 'apertura');
   assert.equal(ap.valorTexto, '$100.000.000');
   assert.ok(!ap.valorTexto.startsWith('+'), 'la apertura no es una entrada de plata');
+});
+
+// ---- los seis listados que abren las cifras -----------------------------
+
+const detalleDe = (clave, t = CON_CAJA) => construirDetalleCifra(clave, vistaDe(t), INV);
+
+test('«Vendido» lista los lotes colocados con su comprador', () => {
+  const d = detalleDe('vendido');
+  assert.deepEqual(d.columnas.map(c => c.etiqueta), ['Lote', 'Comprador', 'Área', 'Valor']);
+  // Siete por el plano: seis vendidos y el de especie. El orden es por número.
+  assert.deepEqual(d.filas.map(f => f.celdas[0]),
+    ['Lote 1', 'Lote 2', 'Lote 3', 'Lote 4', 'Lote 5', 'Lote 10', 'Lote 14']);
+
+  const lote1 = d.filas.find(f => f.celdas[0] === 'Lote 1');
+  assert.equal(lote1.celdas[1], 'Compradora de prueba');
+  assert.equal(lote1.celdas[3], '$200.000.000');
+});
+
+test('el lote en especie se explica solo, y no inventa un valor', () => {
+  const d = detalleDe('vendido');
+  const especie = d.filas.find(f => f.celdas[0] === 'Lote 2');
+  assert.match(especie.celdas[1], /especie/i);
+  assert.equal(especie.celdas[3], '—', 'por él no entró un peso: raya, no $0');
+  assert.equal(especie.alerta, false, 'no es un problema, es un hecho conocido');
+  assert.match(d.nota, /especie/i);
+});
+
+test('el lote que el plano da por vendido y la cartera no conoce queda marcado', () => {
+  // Ahí sí falta plata de verdad, y el total lo dice pegado a la cifra.
+  const d = detalleDe('vendido');
+  const huerfano = d.filas.find(f => f.celdas[0] === 'Lote 3');
+  assert.equal(huerfano.alerta, true);
+  assert.equal(huerfano.celdas[3], '—');
+  assert.match(d.pie.valor, /sin cifras/);
+});
+
+test('«Abonado» lista los abonos en orden de calendario, no alfabético', () => {
+  const conVarios = {
+    ...TABLERO,
+    cartera: [{
+      lote: 1, area: 2754, comprador: 'Compradora de prueba',
+      precio: 200000000, abonado: 60000000, saldo: 140000000,
+      proximaCuotaFecha: '', proximaCuotaValor: null, estado: 'Promesa firmada',
+      abonos: [
+        { fecha: '05/09/2026', valor: 20000000, medio: 'Transferencia' },
+        { fecha: '19/08/2026', valor: 30000000, medio: 'Transferencia' },
+        { fecha: '', valor: 10000000, medio: 'Sin desglose' }
+      ]
+    }]
+  };
+  const d = construirDetalleCifra('abonado', vistaDe(conVarios), INV);
+
+  assert.deepEqual(d.filas.map(f => f.celdas[0]), ['19/08/2026', '05/09/2026', '—']);
+  assert.deepEqual(d.filas.map(f => f.celdas[3]), ['$30.000.000', '$20.000.000', '$10.000.000']);
+  assert.equal(d.pie.valor, '$60.000.000');
+  assert.equal(d.pie.etiqueta, '3 abonos');
+  assert.match(d.nota, /1 abono viene sin fecha/);
+});
+
+test('sin abonos sin fecha el listado no cuelga una nota que no viene al caso', () => {
+  const d = detalleDe('abonado');
+  assert.equal(d.filas.length, 1, 'solo el lote 1 tiene abonos en el tablero de prueba');
+  assert.equal(d.nota, null);
+});
+
+test('«Por cobrar» ordena por saldo y marca el que tiene cuota vencida', () => {
+  const d = detalleDe('porCobrar');
+  assert.deepEqual(d.columnas.map(c => c.etiqueta), ['Lote', 'Comprador', 'Abonado', 'Saldo']);
+  assert.deepEqual(d.filas.map(f => f.celdas[0]), ['Lote 1', 'Lote 5'], 'de mayor a menor saldo');
+  assert.deepEqual(d.filas.map(f => f.celdas[3]), ['$150.000.000', '$60.000.000']);
+
+  const vencido = d.filas.find(f => f.celdas[0] === 'Lote 5');
+  assert.equal(vencido.alerta, true);
+  assert.match(d.nota, /vencida/);
+  assert.equal(d.pie.valor, '$210.000.000');
+});
+
+test('un lote con el saldo en cero no aparece entre lo que falta por cobrar', () => {
+  const pagado = {
+    ...TABLERO,
+    cartera: [{ ...TABLERO.cartera[0], saldo: 0 }, TABLERO.cartera[1]]
+  };
+  const d = construirDetalleCifra('porCobrar', vistaDe(pagado), INV);
+  assert.deepEqual(d.filas.map(f => f.celdas[0]), ['Lote 5']);
+});
+
+test('«Inventario» calcula el precio, no lo lee de ninguna celda', () => {
+  const d = detalleDe('disponible');
+  assert.deepEqual(d.filas.map(f => f.celdas[0]),
+    ['Lote 6', 'Lote 7', 'Lote 8', 'Lote 9', 'Lote 11', 'Lote 12', 'Lote 13']);
+
+  const lote6 = d.filas[0];
+  const area = INV.lotes.find(l => l.n === 6).area;
+  assert.equal(lote6.celdas[3], pesos(area * INV.precioM2));
+
+  // El pie es el mismo total que la cifra «Inventario» de arriba.
+  const totalArea = INV.lotes.filter(l => l.estado === 'disponible').reduce((t, l) => t + l.area, 0);
+  assert.equal(d.pie.valor, pesos(totalArea * INV.precioM2));
+  assert.equal(d.pie.etiqueta, metros(totalArea));
+});
+
+test('«Obra» lista las categorías de mayor a menor con cuántos pagos trae cada una', () => {
+  const d = detalleDe('obra');
+  assert.deepEqual(d.columnas.map(c => c.etiqueta), ['Categoría', 'Pagos', 'Total']);
+  assert.deepEqual(d.filas.map(f => f.celdas), [
+    ['Acueducto', '2', '$100.000.000'],
+    ['Adecuaciones', '1', '$25.000.000']
+  ]);
+  assert.equal(d.pie.etiqueta, '3 pagos');
+  assert.equal(d.pie.valor, '$125.000.000');
+});
+
+test('un total de obra con filas sin leer viaja marcado, pegado a la cifra', () => {
+  // Así llega de verdad: el worker DESCARTA la fila que no pudo leer y manda un
+  // aviso con su categoría. El total se arma sobre las que sí pudo, y la marca
+  // sale del aviso, no de la fila.
+  const conBasura = {
+    ...TABLERO,
+    avisos: [{ tipo: 'ilegible', pestana: 'Egresos', fila: 5, columna: 'Valor', valor: 'ocho mil', categoria: 'Acueducto' }]
+  };
+  const d = construirDetalleCifra('obra', vistaDe(conBasura), INV);
+  const acueducto = d.filas.find(f => f.celdas[0] === 'Acueducto');
+  assert.equal(acueducto.alerta, true);
+  assert.match(acueducto.celdas[2], /sin leer/);
+  assert.match(d.pie.valor, /sin leer/, 'el total general tampoco puede verse completo');
+});
+
+test('«Caja» lista los movimientos y cierra en el saldo', () => {
+  const d = detalleDe('caja');
+  assert.deepEqual(d.columnas.map(c => c.etiqueta), ['Movimiento', 'Valor']);
+  assert.equal(d.filas.length, 5, 'los movimientos, sin el saldo, sin la brecha y sin la nota');
+  assert.equal(d.pie.etiqueta, 'Saldo en banco al cierre del mes');
+  assert.equal(d.pie.valor, '$132.000.000');
+});
+
+test('la caja hereda la marca de la fila cuyo signo contradice a su tipo', () => {
+  const torcida = {
+    ...TABLERO,
+    caja: [
+      { concepto: 'Saldo en banco', valor: 100000000, texto: '', tipo: 'saldo' },
+      { concepto: 'Préstamo a devolver', valor: 500000000, texto: '', tipo: 'resta' }
+    ]
+  };
+  const d = construirDetalleCifra('caja', vistaDe(torcida), INV);
+  assert.equal(d.filas[0].alerta, true, 'no se recalcula acá: viene de construirVistaCaja');
+});
+
+test('un tablero vacío da seis listados sin filas, y ninguno revienta', () => {
+  const vacio = { leidoEn: TABLERO.leidoEn, desdeCache: false, resumen: {}, cartera: [], egresos: [], caja: [], avisos: [] };
+  for (const clave of ['vendido', 'abonado', 'porCobrar', 'disponible', 'obra', 'caja']) {
+    const d = construirDetalleCifra(clave, vistaDe(vacio), INV);
+    assert.ok(d, clave);
+    assert.ok(d.vacio, `${clave} no dice qué mostrar cuando no hay filas`);
+  }
+  // Los lotes no dependen de la hoja: salen del inventario y siguen ahí.
+  assert.equal(construirDetalleCifra('disponible', vistaDe(vacio), INV).filas.length, 7);
+  assert.equal(construirDetalleCifra('abonado', vistaDe(vacio), INV).filas.length, 0);
+});
+
+test('ningún listado deja salir HTML crudo de la hoja', () => {
+  const CARGA = `<img src=x onerror=alert(1)>'"`;
+  const envenenado = {
+    ...TABLERO,
+    cartera: [{ ...TABLERO.cartera[0], comprador: CARGA,
+      abonos: [{ fecha: CARGA, valor: 1000, medio: CARGA }] }],
+    egresos: [{ fecha: CARGA, categoria: CARGA, concepto: CARGA, valor: 1000 }],
+    caja: [{ concepto: CARGA, valor: 1000, texto: CARGA, tipo: 'nota' }]
+  };
+  for (const clave of ['vendido', 'abonado', 'porCobrar', 'disponible', 'obra', 'caja']) {
+    const d = construirDetalleCifra(clave, vistaDe(envenenado), INV);
+    const textos = [
+      d.titulo, d.nota ?? '', d.vacio,
+      ...(d.pie ? [d.pie.etiqueta, d.pie.valor] : []),
+      ...d.columnas.map(c => c.etiqueta),
+      ...d.filas.flatMap(f => f.celdas)
+    ];
+    for (const t of textos) {
+      assert.doesNotMatch(String(t), /<img|<svg|<script/, `«${clave}» sacó texto sin escapar: ${t}`);
+    }
+  }
 });

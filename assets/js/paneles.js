@@ -30,42 +30,285 @@ const ETIQUETA_ESTADO = {
   especie: 'En especie'
 };
 
-// A dónde lleva cada cifra de arriba.
+// Qué listado abre cada cifra de arriba.
 //
-// La regla es una sola: la tarjeta abre el panel donde ESE número está
-// desglosado, y lo deja en el estado en que se ve. Por eso «Vendido»,
-// «Abonado» y «Por cobrar» van las tres a los lotes colocados —los tres
-// números salen del mismo grupo de lotes—, y lo que las distingue es cuál de
-// las cifras del resumen se resalta al llegar.
+// La clave sale del rótulo LARGO, que es el nombre de la fila en la hoja, no
+// del corto que se ve en la tarjeta: el corto es cosa de esta pantalla y puede
+// cambiar sin que cambie el dato.
 //
-// `resalta` es el rótulo EXACTO de una cifra de `construirTotalesLotes`. La
-// prueba «cada resalta existe en el grupo al que apunta» impide que un cambio
-// de rótulo allá deje estas tarjetas apuntando al vacío en silencio.
-//
-// Una etiqueta que no esté acá sale con `panel: null` y se dibuja como caja
+// Una etiqueta que no esté acá sale con `clave: null` y se dibuja como caja
 // quieta, no como botón muerto: si la hoja gana una fila nueva de resumen,
-// aparece sin ser clicable en vez de romper la fila entera.
-const DESTINO = {
-  'Vendido': { panel: 'lotes', grupo: 'vendidos', resalta: 'Valor total', pista: 'Ver los lotes colocados' },
-  'Abonado': { panel: 'lotes', grupo: 'vendidos', resalta: 'Abonado', pista: 'Ver lo abonado en los lotes colocados' },
-  'Por cobrar': { panel: 'lotes', grupo: 'vendidos', resalta: 'Saldo por cobrar', pista: 'Ver el saldo de los lotes colocados' },
-  'Disponible': { panel: 'lotes', grupo: 'sinVender', resalta: 'Valor de lista', pista: 'Ver los lotes sin vender' },
-  'Gastado en obra': { panel: 'gastos', grupo: null, resalta: null, pista: 'Ver en qué se ha gastado' },
-  'Caja': { panel: 'caja', grupo: null, resalta: null, pista: 'Ver el movimiento de la caja' }
+// aparece sin ser pulsable en vez de prometer un listado que no existe.
+const CLAVE_DE_CIFRA = {
+  'Vendido': 'vendido',
+  'Abonado': 'abonado',
+  'Por cobrar': 'porCobrar',
+  'Disponible': 'disponible',
+  'Gastado en obra': 'obra',
+  'Caja': 'caja'
+};
+
+const PISTA_DE_CIFRA = {
+  vendido: 'Ver los lotes colocados y quién los compró',
+  abonado: 'Ver los abonos recibidos, con su fecha',
+  porCobrar: 'Ver cuánto debe cada lote',
+  disponible: 'Ver los lotes que faltan por vender',
+  obra: 'Ver en qué se ha gastado',
+  caja: 'Ver los movimientos de la caja'
 };
 
 export function construirCifras(resumen) {
   return (resumen ?? []).map(r => {
-    const d = DESTINO[r.etiqueta] ?? { panel: null, grupo: null, resalta: null, pista: null };
+    const clave = CLAVE_DE_CIFRA[r.etiqueta] ?? null;
     return {
       etiqueta: ROTULO_CORTO[r.etiqueta] ?? r.etiqueta,
       texto: r.texto,
-      panel: d.panel,
-      grupo: d.grupo,
-      resalta: d.resalta,
-      pista: d.pista
+      clave,
+      pista: clave === null ? null : PISTA_DE_CIFRA[clave]
     };
   });
+}
+
+// ---- el listado que abre cada cifra -------------------------------------
+//
+// Debajo de las seis cifras se abre el listado que explica la que se pulsó:
+// «Vendido» muestra los lotes colocados y quién los compró, «Abonado» los
+// abonos con su fecha, y así. Es la pregunta que sigue a cualquier total
+// —«¿de dónde sale?»— contestada en el mismo sitio donde está el número.
+//
+// Los seis devuelven la MISMA forma —título, columnas, filas, pie—, y la vista
+// tiene una sola plantilla para todos. Si cada listado trajera la suya, cada
+// uno necesitaría su propio escapado, y ahí es donde se cuela el que se olvidó.
+//
+// El texto que sale de la hoja (comprador, concepto, categoría) llega YA
+// escapado dentro de `vista`, igual que en el resto del archivo, y no se
+// vuelve a tocar. Lo demás son literales de acá y cifras formateadas a partir
+// de números.
+
+// Una fecha convertida a algo que se pueda ordenar.
+//
+// No se compara el texto: «05/09/2026» va antes que «19/08/2026» en orden
+// alfabético y después en el calendario. Con los tres abonos de agosto que hay
+// hoy da igual; en cuanto entre uno de septiembre, no.
+//
+// Entiende las dos formas que puede mandar el worker: «dd/mm/aaaa», que es lo
+// que devuelve `fechaLegible` cuando la celda trae una fecha de verdad, y
+// «aaaa-mm-dd», que es lo que devuelve cuando la celda trae la fecha escrita a
+// mano como texto y la deja pasar tal cual. Cualquier otra cosa es null, y esas
+// filas van al final en vez de colarse en una posición inventada.
+function ordenDeFecha(texto) {
+  const t = String(texto ?? '').trim();
+  const barras = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);
+  if (barras) return Number(barras[3]) * 10000 + Number(barras[2]) * 100 + Number(barras[1]);
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  if (iso) return Number(iso[1]) * 10000 + Number(iso[2]) * 100 + Number(iso[3]);
+  return null;
+}
+
+const nombreDeLote = (n) => `Lote ${n}`;
+
+// Una fila de plata que la cartera no trajo. Se distingue del «$0» a propósito:
+// que no haya cifra no es que la cifra sea cero.
+const RAYA = '—';
+
+function detalleVendido(vista, inventario) {
+  const porLote = new Map((vista?.cartera ?? []).map(c => [c.lote, c]));
+  const lotes = [...inventario.lotes]
+    .filter(l => GRUPO_DE_ESTADO[l.estado] === 'vendidos')
+    .sort((a, b) => a.n - b.n);
+  const plata = sumarPlataDeLotes(lotes, porLote, 'precio');
+  const enEspecie = lotes.filter(l => l.estado === 'especie').length;
+
+  return {
+    titulo: 'Los lotes colocados',
+    columnas: [
+      { etiqueta: 'Lote' }, { etiqueta: 'Comprador' },
+      { etiqueta: 'Área', numerica: true }, { etiqueta: 'Valor', numerica: true }
+    ],
+    filas: lotes.map(l => {
+      const c = porLote.get(l.n);
+      const especie = l.estado === 'especie';
+      return {
+        celdas: [
+          nombreDeLote(l.n),
+          especie ? 'Entregado como pago en especie' : (c?.comprador || 'Sin fila en la cartera'),
+          metros(l.area),
+          especie || !c ? RAYA : c.precioTexto
+        ],
+        // El lote que el plano da por vendido y la cartera no conoce sí es un
+        // problema: falta plata de verdad. El de especie no — por él nunca
+        // entró un peso y eso ya se sabe.
+        alerta: !especie && !c
+      };
+    }),
+    pie: { etiqueta: `${lotes.length} ${lotes.length === 1 ? 'lote' : 'lotes'}`, valor: plata.texto },
+    nota: enEspecie === 0 ? null
+      : 'El lote entregado como pago en especie cuenta entre los colocados, pero por él no entró dinero y no suma al valor.',
+    vacio: 'Todavía no hay ningún lote colocado.'
+  };
+}
+
+function detalleAbonado(vista) {
+  const cartera = vista?.cartera ?? [];
+  const filas = [];
+
+  for (const c of cartera) {
+    for (const a of c.abonos ?? []) {
+      filas.push({
+        orden: ordenDeFecha(a.fecha),
+        celdas: [a.fecha || RAYA, nombreDeLote(c.lote), c.comprador || RAYA, a.valorTexto],
+        alerta: false
+      });
+    }
+  }
+
+  // Los abonos sin fecha van al final: son los que se registraron como un solo
+  // monto antes de que se llevara el detalle, y no se sabe cuándo entraron.
+  filas.sort((x, y) => {
+    if (x.orden === null && y.orden === null) return 0;
+    if (x.orden === null) return 1;
+    if (y.orden === null) return -1;
+    return x.orden - y.orden;
+  });
+
+  const sinFecha = filas.filter(f => f.orden === null).length;
+  const total = cartera.reduce(
+    (t, c) => t + (c.abonos ?? []).reduce((s, a) => s + (typeof a.valor === 'number' ? a.valor : 0), 0), 0);
+
+  return {
+    titulo: 'Los abonos recibidos',
+    columnas: [
+      { etiqueta: 'Fecha' }, { etiqueta: 'Lote' },
+      { etiqueta: 'Comprador' }, { etiqueta: 'Abono', numerica: true }
+    ],
+    filas: filas.map(({ celdas, alerta }) => ({ celdas, alerta })),
+    pie: { etiqueta: `${filas.length} ${filas.length === 1 ? 'abono' : 'abonos'}`, valor: pesos(total) },
+    nota: sinFecha === 0 ? null
+      : `${sinFecha} ${sinFecha === 1 ? 'abono viene' : 'abonos vienen'} sin fecha: se registraron como un solo monto antes de que se llevara el detalle. Suman igual.`,
+    vacio: 'Todavía no se ha registrado ningún abono.'
+  };
+}
+
+function detallePorCobrar(vista) {
+  const conSaldo = (vista?.cartera ?? [])
+    .filter(c => typeof c.saldo !== 'number' || c.saldo !== 0)
+    .sort((a, b) => (b.saldo ?? 0) - (a.saldo ?? 0));
+  const total = conSaldo.reduce((t, c) => t + (typeof c.saldo === 'number' ? c.saldo : 0), 0);
+  const vencidos = conSaldo.filter(c => mencionaVencido(c.proximaCuotaTexto)).length;
+
+  return {
+    titulo: 'Lo que falta por cobrar',
+    columnas: [
+      { etiqueta: 'Lote' }, { etiqueta: 'Comprador' },
+      { etiqueta: 'Abonado', numerica: true }, { etiqueta: 'Saldo', numerica: true }
+    ],
+    // De mayor a menor saldo: el que más debe es el que primero hay que mirar.
+    filas: conSaldo.map(c => ({
+      celdas: [nombreDeLote(c.lote), c.comprador || RAYA, c.abonadoTexto, c.saldoTexto],
+      alerta: mencionaVencido(c.proximaCuotaTexto)
+    })),
+    pie: { etiqueta: `${conSaldo.length} ${conSaldo.length === 1 ? 'lote' : 'lotes'}`, valor: pesos(total) },
+    nota: vencidos === 0 ? null
+      : `${vencidos === 1 ? 'Un lote tiene' : `${vencidos} lotes tienen`} una cuota vencida. Están marcados.`,
+    vacio: 'No queda saldo por cobrar.'
+  };
+}
+
+function detalleDisponible(vista, inventario) {
+  const lotes = [...inventario.lotes]
+    .filter(l => GRUPO_DE_ESTADO[l.estado] === 'sinVender')
+    .sort((a, b) => a.n - b.n);
+  const total = lotes.reduce((t, l) => t + precioDeLote(l, inventario.precioM2), 0);
+
+  return {
+    titulo: 'Los lotes sin vender',
+    columnas: [
+      { etiqueta: 'Lote' }, { etiqueta: 'Sector' },
+      { etiqueta: 'Área', numerica: true }, { etiqueta: 'Valor de lista', numerica: true }
+    ],
+    filas: lotes.map(l => ({
+      celdas: [nombreDeLote(l.n), `Sector ${l.sector}`, metros(l.area),
+        pesos(precioDeLote(l, inventario.precioM2))],
+      alerta: false
+    })),
+    pie: { etiqueta: metros(lotes.reduce((t, l) => t + l.area, 0)), valor: pesos(total) },
+    // El precio no se lee de ninguna celda: es el área por el valor del metro,
+    // el mismo cálculo con el que la vitrina pública anuncia cada lote.
+    nota: `A precio de lista: el área de cada lote por ${pesos(inventario.precioM2)} el metro.`,
+    vacio: 'No queda ningún lote sin vender.'
+  };
+}
+
+function detalleObra(vista) {
+  const grupos = vista?.egresosPorCategoria ?? [];
+  const total = grupos.reduce((t, g) => t + g.total, 0);
+  const sinLeer = grupos.reduce((t, g) => t + (g.filasSinLeer ?? 0), 0);
+  const pagos = grupos.reduce((t, g) => t + g.movimientos.length, 0);
+
+  return {
+    titulo: 'En qué se ha gastado',
+    columnas: [
+      { etiqueta: 'Categoría' }, { etiqueta: 'Pagos', numerica: true },
+      { etiqueta: 'Total', numerica: true }
+    ],
+    // Ya vienen de mayor a menor de `construirVistaTablero`.
+    filas: grupos.map(g => ({
+      celdas: [g.categoria, String(g.movimientos.length), g.totalTexto],
+      alerta: g.incompleto
+    })),
+    pie: {
+      etiqueta: `${pagos} ${pagos === 1 ? 'pago' : 'pagos'}`,
+      // La marca de incompleto viaja PEGADA a la cifra, como en el resto del
+      // archivo: ninguna plantilla puede mostrar el total sin mostrar que le
+      // falta algo.
+      valor: sinLeer > 0
+        ? `${pesos(total)} + ${sinLeer} ${sinLeer === 1 ? 'movimiento' : 'movimientos'} sin leer`
+        : pesos(total)
+    },
+    nota: 'En la pestaña «En qué se ha gastado» cada categoría se abre y muestra sus pagos uno por uno.',
+    vacio: 'Todavía no hay gastos de obra registrados.'
+  };
+}
+
+function detalleCaja(vista) {
+  const c = construirVistaCaja(vista?.caja);
+  const movimientos = c.movimientos;
+
+  return {
+    titulo: 'El movimiento de la caja',
+    columnas: [{ etiqueta: 'Movimiento' }, { etiqueta: 'Valor', numerica: true }],
+    filas: movimientos.map(m => ({
+      celdas: [m.concepto || RAYA, m.valorTexto],
+      // La fila cuyo signo contradice a su tipo ya viene marcada de
+      // `construirVistaCaja`. Acá se hereda esa marca en vez de recalcularla.
+      alerta: m.contradice
+    })),
+    pie: c.saldo ? { etiqueta: c.saldo.concepto || 'Saldo', valor: c.saldo.valorTexto } : null,
+    nota: c.notas.map(n => n.texto).filter(Boolean).join(' · ') || null,
+    vacio: 'Todavía no hay una cuenta de caja que mostrar.'
+  };
+}
+
+/**
+ * El listado que explica una de las seis cifras de arriba.
+ *
+ * @param clave       'vendido' | 'abonado' | 'porCobrar' | 'disponible' | 'obra' | 'caja'
+ * @param vista       lo que devuelve `construirVistaTablero` (texto YA escapado)
+ * @param inventario  el JSON de data/lotes.json
+ *
+ * Devuelve null si la clave no es ninguna de las seis: una cifra sin listado se
+ * dibuja como caja quieta y no llega hasta acá, pero la puerta se cierra igual.
+ */
+export function construirDetalleCifra(clave, vista, inventario) {
+  switch (clave) {
+    case 'vendido': validarInventario(inventario); return detalleVendido(vista, inventario);
+    case 'abonado': return detalleAbonado(vista);
+    case 'porCobrar': return detallePorCobrar(vista);
+    case 'disponible': validarInventario(inventario); return detalleDisponible(vista, inventario);
+    case 'obra': return detalleObra(vista);
+    case 'caja': return detalleCaja(vista);
+    default: return null;
+  }
 }
 
 // ---- la ficha de un lote ------------------------------------------------

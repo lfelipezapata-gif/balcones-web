@@ -291,15 +291,120 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   outline: 2px solid var(--verde);
   outline-offset: -2px;
 }
-/* La tarjeta desde la que se llegó al panel que está abierto. Se marca con el
-   verde de la marca en un filo a la izquierda y no invirtiendo la caja entera:
-   son seis cifras juntas y una caja verde entre cinco blancas se lee como
-   «esta cifra es distinta», que no es lo que dice. */
-.tablero button.cifra-caja[aria-pressed="true"] {
+/* La tarjeta que tiene su listado abierto. Se marca con el verde de la marca en
+   un filo a la izquierda y no invirtiendo la caja entera: son seis cifras
+   juntas y una caja verde entre cinco blancas se lee como «esta cifra es
+   distinta», que no es lo que dice. */
+.tablero button.cifra-caja[aria-expanded="true"] {
   background: #f2f6f2;
   box-shadow: inset 3px 0 0 var(--verde);
 }
-.tablero button.cifra-caja[aria-pressed="true"] .rot { color: var(--verde); }
+.tablero button.cifra-caja[aria-expanded="true"] .rot { color: var(--verde); }
+.tablero button.cifra-caja[aria-expanded="true"] .rot::after {
+  content: " ⌄";
+  color: var(--verde);
+}
+
+/* --- el listado que abre una cifra ------------------------------------- */
+/* Va pegado a las tarjetas y con el mismo filo verde que la que lo abrió: es
+   lo que dice de cuál de las seis está hablando cuando uno baja la vista. */
+.tablero #detalle-cifra {
+  border: 1px solid var(--borde);
+  border-left: 3px solid var(--verde);
+  border-radius: 10px;
+  background: #fff;
+  padding: 1rem 1.1rem;
+  margin-top: .6rem;
+}
+.tablero .detalle-titulo { margin: 0 0 .8rem; font-size: 1.05rem; color: var(--verde); }
+.tablero .detalle-tabla-caja { overflow-x: auto; }
+.tablero .detalle-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.tablero .detalle-tabla th {
+  text-align: left;
+  font-size: .66rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #7a7a72;
+  font-weight: 600;
+  padding: 0 .6rem .45rem 0;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+.tablero .detalle-tabla td {
+  padding: .5rem .6rem .5rem 0;
+  border-bottom: 1px solid #f0ede6;
+  vertical-align: top;
+}
+.tablero .detalle-tabla tr:last-child td { border-bottom: 0; }
+/* Las cifras a la derecha y con el mismo ancho por dígito: así se comparan de
+   un vistazo sin tener que leerlas. */
+.tablero .detalle-tabla .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tablero .detalle-tabla td.num { font-weight: 600; }
+/* La fila que hay que mirar: un lote vendido sin fila en la cartera, una cuota
+   vencida, una categoría con movimientos sin leer. Ámbar y no rojo — es «andá a
+   revisar esto», no «esto está roto». */
+.tablero .detalle-tabla tr[data-alerta] { background: #fffaf0; }
+.tablero .detalle-tabla tr[data-alerta] td:first-child { box-shadow: inset 3px 0 0 #e0a63c; }
+
+.tablero .detalle-pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: .85rem 0 0;
+  padding-top: .7rem;
+  border-top: 2px solid #cfcabd;
+}
+.tablero .detalle-pie span { font-size: .8rem; color: #6b6b6b; }
+.tablero .detalle-pie strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.tablero .detalle-nota { margin: .7rem 0 0; font-size: .85rem; color: #6b6b6b; }
+.tablero .detalle-vacio { margin: 0; color: #6b6b6b; }
+.tablero .detalle-error { margin: 0; color: #9b2c2c; font-weight: 600; }
+
+/* En el teléfono la tabla se desarma: cada fila pasa a ser un bloque y cada
+   dato lleva delante el nombre de su columna, que sale del `data-rot`. Cuatro
+   columnas —fecha, lote, comprador, abono— no se leen en 375 px, y el scroll
+   horizontal esconde justo la columna de la plata. */
+@media (max-width: 619px) {
+  .tablero .detalle-tabla thead { display: none; }
+  .tablero .detalle-tabla, .tablero .detalle-tabla tbody { display: block; }
+  .tablero .detalle-tabla tr {
+    display: block;
+    padding: .6rem .7rem;
+    margin-bottom: .5rem;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+  }
+  .tablero .detalle-tabla tr:last-child { margin-bottom: 0; }
+  .tablero .detalle-tabla td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: .2rem 0;
+    border-bottom: 0;
+    text-align: left;
+  }
+  .tablero .detalle-tabla td::before {
+    content: attr(data-rot);
+    flex: none;
+    font-size: .66rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: #7a7a72;
+  }
+  .tablero .detalle-tabla td.num { text-align: right; }
+  .tablero .detalle-tabla tr[data-alerta] td:first-child { box-shadow: none; }
+  .tablero .detalle-tabla tr[data-alerta] { border-color: #e0a63c; }
+}
 
 /* --- las pestañas ------------------------------------------------------ */
 .tablero .pestanas { display: flex; flex-wrap: wrap; gap: .5rem; }
