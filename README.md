@@ -48,6 +48,32 @@ Entre ellas está `test/secretos.test.js`, que escanea **todo lo versionado** bu
 llaves privadas, credenciales de cuenta de servicio, correos personales, cédulas y
 celulares. Si falla, se saca el dato del archivo — no se relaja la prueba.
 
+## Cuando se vende un lote
+
+Casi todo se actualiza solo. En `data/lotes.json` se le cambia el `estado` al lote,
+de `disponible` a `vendido`, y con eso la vitrina recalcula el titular, el área
+disponible y el listado. **El precio nunca se escribe:** sale de `área × precioM2`.
+
+Lo único que **no** se actualiza solo es el plano, `img/mapa.jpg`, porque el color
+verde y gris de cada lote vive dentro de la imagen. No se puede pintar desde los
+datos: el plano del brochure trae los lotes vecinos del mismo color fusionados en
+una sola mancha —el Sector 1 tiene 11 lotes y solo 4 manchas—, así que no hay
+geometría individual que recolorear.
+
+Para que eso no se vuelva una mentira en pantalla, `img/mapa-estado.json` guarda con
+qué inventario se generó el plano, y una prueba compara las dos cosas. Si se vende un
+lote y no se regenera el plano, **la suite falla** y dice cuál lote quedó mal, en vez
+de que el sitio siga mostrando en verde algo que ya tiene dueño.
+
+Regenerarlo, después de rehacer el plano en el brochure:
+
+```bash
+BALCONES_MAPA_ORIGEN=<ruta al plano del brochure> python3 herramientas/preparar-mapa.py
+```
+
+Para que el plano se pinte solo desde `data/lotes.json` habría que partir de los
+planos del arquitecto, donde cada lote sí es un polígono propio.
+
 ## Servir la vitrina
 
 En local hace falta un servidor: la página carga `data/lotes.json` con `fetch` y usa

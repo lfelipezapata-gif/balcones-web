@@ -46,3 +46,35 @@ test('la portada pesa menos de 250 KB', () => {
   const real = Math.round(statSync(ruta('portada.jpg')).size / 1024);
   assert.ok(real <= 250, `img/portada.jpg pesa ${real} KB y el tope son 250 KB`);
 });
+
+test('el plano de lotes pesa menos de 150 KB', () => {
+  const real = Math.round(statSync(ruta('mapa.jpg')).size / 1024);
+  assert.ok(real <= 150, `img/mapa.jpg pesa ${real} KB y el tope son 150 KB`);
+});
+
+// El color verde/gris de cada lote vive DENTRO de img/mapa.jpg: no se puede
+// pintar desde data/lotes.json porque el plano del brochure trae los lotes
+// vecinos del mismo color fusionados en una sola mancha. Esta prueba es lo
+// que impide que esa limitación se vuelva una mentira en pantalla: si alguien
+// vende un lote y no regenera el plano, la prueba falla en vez de que el
+// sitio siga mostrando en verde un lote que ya tiene dueño.
+test('el plano de lotes está al día con el inventario', () => {
+  const inventario = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url)));
+  const huella = JSON.parse(readFileSync(ruta('mapa-estado.json')));
+
+  const actual = Object.fromEntries(
+    [...inventario.lotes].sort((a, b) => a.n - b.n).map(l => [String(l.n), l.estado])
+  );
+
+  const cambiados = Object.keys(actual)
+    .filter(n => actual[n] !== huella.estados[n])
+    .map(n => `lote ${n}: el plano lo muestra como «${huella.estados[n]}» y el inventario dice «${actual[n]}»`);
+
+  assert.deepEqual(
+    cambiados, [],
+    'El plano de lotes quedó desactualizado:\n  ' + cambiados.join('\n  ') +
+    '\n\nRegeneralo:\n' +
+    '  BALCONES_MAPA_ORIGEN=<ruta al plano del brochure> python3 herramientas/preparar-mapa.py\n' +
+    'Y ojo: el brochure también hay que rehacerlo antes, porque el color sale de ahí.'
+  );
+});
