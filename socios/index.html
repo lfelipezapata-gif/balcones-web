@@ -39,6 +39,8 @@
             aria-selected="false" aria-controls="panel-gastos">En qué se ha gastado</button>
     <button type="button" class="pestana" id="tab-socios" role="tab"
             aria-selected="false" aria-controls="panel-socios">Los socios</button>
+    <button type="button" class="pestana" id="tab-caja" role="tab"
+            aria-selected="false" aria-controls="panel-caja">La caja</button>
   </nav>
 
   <section id="panel-lotes" role="tabpanel" aria-labelledby="tab-lotes">
@@ -69,6 +71,10 @@
     <div id="socios"></div>
   </section>
 
+  <section id="panel-caja" role="tabpanel" aria-labelledby="tab-caja" hidden>
+    <div id="caja"></div>
+  </section>
+
   <section id="avisos" class="avisos"></section>
 </main>
 
@@ -77,7 +83,7 @@ import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js';
 import { construirVistaTablero, escapar } from '../assets/js/tablero.js';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
-  construirTotalesLotes
+  construirTotalesLotes, construirVistaCaja
 } from '../assets/js/paneles.js';
 import { pintarMapa } from '../assets/js/mapa.js';
 
@@ -103,7 +109,8 @@ function mostrarError(mensaje) {
 const PESTANAS = [
   ['tab-lotes', 'panel-lotes'],
   ['tab-gastos', 'panel-gastos'],
-  ['tab-socios', 'panel-socios']
+  ['tab-socios', 'panel-socios'],
+  ['tab-caja', 'panel-caja']
 ];
 
 function verPestana(tabActiva) {
@@ -386,6 +393,64 @@ function pintarSocios(vista) {
     ${avisoReparto}`;
 }
 
+/* --- la caja ----------------------------------------------------------- */
+
+// La cuenta de la caja, de arriba abajo: el saldo con el que arranca, lo que
+// entra y lo que sale, y la brecha con la que cierra.
+//
+// Todo el texto que sale de la hoja —el concepto de cada fila, el texto de una
+// nota— llega ya escapado desde `construirVistaTablero`, y los avisos los arma
+// `construirVistaCaja` mezclando literales con ese concepto ya escapado: por eso
+// no se vuelven a escapar acá (hacerlo mostraría «&amp;lt;img» en pantalla). Lo
+// único que se interpola dentro de un atributo es `tipo`, que sale del
+// vocabulario cerrado de assets/js/paneles.js ('saldo', 'suma', 'resta',
+// 'subtotal', 'brecha', 'otro') y nunca del texto de la hoja.
+function pintarCaja(vista) {
+  const c = construirVistaCaja(vista.caja);
+
+  if (!c.hay) {
+    $('caja').innerHTML =
+      '<p class="invitacion">Todavía no hay una cuenta de caja que mostrar. Mirá los avisos del final.</p>';
+    return;
+  }
+
+  const saldo = c.saldo ? `
+    <div class="caja-saldo">
+      <span class="rot">${c.saldo.concepto || 'Saldo'}</span>
+      <strong>${c.saldo.valorTexto}</strong>
+    </div>` : '';
+
+  const movimientos = c.movimientos.length ? `
+    <ul class="caja-lista">
+      ${c.movimientos.map(m => `
+        <li class="caja-fila" data-tipo="${m.tipo}"${m.contradice ? ' data-contradice' : ''}>
+          <span class="caja-concepto">${m.concepto || '—'}</span>
+          <span class="caja-valor">${m.valorTexto}</span>
+        </li>`).join('')}
+    </ul>` : '';
+
+  // El número más importante del proyecto. Va en su propio bloque y no como una
+  // fila más de la lista, y la línea de abajo dice qué significa el signo.
+  const brecha = c.brecha ? `
+    <div class="caja-brecha">
+      <span class="rot">${c.brecha.concepto || 'Brecha'}</span>
+      <strong>${c.brecha.valorTexto}</strong>
+      ${c.brechaSentido ? `<span class="caja-brecha-nota">${c.brechaSentido}</span>` : ''}
+    </div>` : '';
+
+  const revisar = c.avisos.length
+    ? `<ul class="caja-revisar">${c.avisos.map(a => `<li>${a}</li>`).join('')}</ul>`
+    : '';
+
+  const notas = c.notas.length ? `
+    <dl class="caja-notas">
+      ${c.notas.map(n => `
+        <div><dt>${n.concepto || '—'}</dt><dd>${n.texto || '—'}</dd></div>`).join('')}
+    </dl>` : '';
+
+  $('caja').innerHTML = saldo + movimientos + brecha + revisar + notas;
+}
+
 /* --- carga ------------------------------------------------------------- */
 
 async function cargar(credencial) {
@@ -440,6 +505,7 @@ async function cargar(credencial) {
 
   pintarGastos(v);
   pintarSocios(v);
+  pintarCaja(v);
 
   // Los avisos del plano se muestran junto con los del Worker, en la misma
   // lista: los dos dicen «esto que ves puede estar mal, andá a revisar la

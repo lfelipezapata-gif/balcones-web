@@ -173,6 +173,24 @@ export function construirVistaTablero(tablero, ahora = new Date()) {
         totalTexto: texto(s.total)
       };
     }),
+    // La caja llega tal como la manda el worker —fila por fila y en el orden de
+    // la hoja—, solo escapada. Acá no se formatea ninguna cifra a propósito: el
+    // formato de la fila depende de su TIPO (una suma lleva su «+» delante, un
+    // saldo no) y esa decisión, junto con la de qué hacer con un tipo
+    // desconocido, vive completa en `construirVistaCaja` (assets/js/paneles.js).
+    // Partirla en dos archivos era la forma de que una mitad contradijera a la otra.
+    //
+    // `escaparTextos` no toca los números, así que `f.valor` sigue sirviendo
+    // para calcular del otro lado.
+    caja: (tablero.caja ?? []).map(f => {
+      const seguro = escaparTextos(f);
+      return {
+        ...seguro,
+        concepto: seguro.concepto ?? '',
+        texto: seguro.texto ?? '',
+        tipo: seguro.tipo ?? ''
+      };
+    }),
     egresosPorCategoria: [...porCategoria.entries()]
       .map(([categoria, movimientos]) => {
         const total = movimientos.reduce((t, m) => t + m.valor, 0);

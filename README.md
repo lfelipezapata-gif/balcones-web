@@ -112,11 +112,20 @@ Van en el archivo, versionadas. Ninguna es secreta.
 | `ID_HOJA_ESPEJO` | El identificador de la hoja de cálculo espejo que el Worker lee. | De la URL de la hoja, el tramo que va entre `/d/` y `/edit`. |
 | `ORIGEN_PERMITIDO` | El origen exacto donde queda publicada la vitrina. Con esquema, sin barra final ni ruta (`https://ejemplo.com`). Es la cabecera CORS que deja al navegador hablarle al Worker. | Lo define dónde se publique el sitio. Si queda vacío o mal escrito, todo `fetch` del tablero muere en CORS y el socio lee «No hay conexión con el servidor del tablero», que apunta al lugar equivocado. |
 
-La hoja espejo necesita cuatro pestañas, con estos nombres exactos y su fila de
-encabezado: **Resumen**, **Cartera**, **Abonos** y **Egresos**. El Resumen necesita
-además seis filas rotuladas `Vendido`, `Abonado`, `Por cobrar`, `Disponible`,
-`Gastado en obra` y `Caja`. Si alguna se renombra o se borra, el tablero lo avisa por
-su nombre en vez de mostrar un número equivocado.
+La hoja espejo necesita seis pestañas, con estos nombres exactos y su fila de
+encabezado: **Tablero Resumen**, **Tablero Cartera**, **Tablero Abonos**,
+**Tablero Egresos**, **Tablero Socios** y **Tablero Caja**. `Tablero Resumen`
+necesita además seis filas rotuladas `Vendido`, `Abonado`, `Por cobrar`,
+`Disponible`, `Gastado en obra` y `Caja`. Si alguna se renombra o se borra, el
+tablero lo avisa por su nombre en vez de mostrar un número equivocado.
+
+`Tablero Caja` va con tres columnas — `Concepto | Valor | Tipo` — y **la que manda es
+`Tipo`**: los conceptos y las cifras cambian cada vez que se actualiza el libro, el
+papel de cada fila no. Los tipos que la pestaña sabe pintar son `saldo` (la cifra de
+arriba), `suma` y `resta` (lo que entra y lo que sale, con su signo), `subtotal` (un
+corte), `brecha` (el resultado, en su propio bloque) y `nota` (una referencia al pie:
+su columna `Valor` lleva texto, no plata). Una fila con un tipo que no esté en esa
+lista se muestra igual, con su concepto y su cifra, sin signo ni realce.
 
 ### 2. Secretos — nunca en un archivo
 

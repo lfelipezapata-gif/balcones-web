@@ -489,3 +489,51 @@ test('el nombre del socio y el rótulo del aporte salen escapados, no interpreta
 test('sin pestaña de socios el tablero devuelve una lista vacía, no revienta', () => {
   assert.deepEqual(construirVistaTablero(TABLERO, AHORA).socios, []);
 });
+
+// --- «Tablero Caja»: escapar en el borde y no formatear nada ---------------
+//
+// El formato de una fila de la caja depende de su TIPO —una suma lleva su «+»
+// delante, un saldo no— y esa decisión vive completa en `construirVistaCaja`
+// (assets/js/paneles.js). Acá solo se escapa: lo que se fija es que las cifras
+// lleguen intactas al otro lado, porque del otro lado hay que sumarlas.
+
+const CON_CAJA = {
+  ...TABLERO,
+  caja: [
+    { concepto: 'Saldo en banco', valor: 132000000, texto: '', tipo: 'saldo' },
+    { concepto: 'Préstamo a devolver', valor: -500000000, texto: '', tipo: 'resta' },
+    { concepto: 'Cuenta', valor: null, texto: 'Banco de prueba, ahorros', tipo: 'nota' }
+  ]
+};
+
+test('la caja llega fila por fila, con sus números intactos para poder sumarlos', () => {
+  const c = construirVistaTablero(CON_CAJA, AHORA).caja;
+  assert.equal(c.length, 3);
+  assert.deepEqual(c.map(f => f.tipo), ['saldo', 'resta', 'nota']);
+  assert.equal(c[0].valor, 132000000, 'el número sigue siendo un número');
+  assert.equal(c[1].valor, -500000000);
+  assert.equal(c[2].valor, null, 'una nota no tiene cifra, y null no es 0');
+  assert.equal(c[2].texto, 'Banco de prueba, ahorros');
+});
+
+test('el concepto y el texto de la caja salen escapados, no interpretados', () => {
+  const malicioso = {
+    ...TABLERO,
+    caja: [{
+      concepto: '<img src=x onerror="window.__xss=1">',
+      valor: 1000,
+      texto: '"><svg onload=alert(1)>',
+      tipo: 'nota'
+    }]
+  };
+  const f = construirVistaTablero(malicioso, AHORA).caja[0];
+  assert.doesNotMatch(f.concepto, /<img/);
+  assert.match(f.concepto, /&lt;img/);
+  assert.match(f.concepto, /&quot;/);
+  assert.doesNotMatch(f.texto, /<svg/);
+  assert.match(f.texto, /&quot;&gt;&lt;svg/);
+});
+
+test('sin pestaña de caja el tablero devuelve una lista vacía, no revienta', () => {
+  assert.deepEqual(construirVistaTablero(TABLERO, AHORA).caja, []);
+});

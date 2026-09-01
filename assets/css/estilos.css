@@ -612,6 +612,130 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   .tablero .tabla-socios tfoot tr { background: #f6f5f1; }
 }
 
+/* --- pestaña «La caja» -------------------------------------------------- */
+/* Una cuenta, no una tabla: el saldo arriba, lo que entra y lo que sale en el
+   medio, el corte del subtotal y el resultado al final. Se lee de arriba abajo
+   igual que en un papel, y por eso nada de esto va en columnas — en 390 px una
+   cuenta en columnas deja de leerse como cuenta. */
+.tablero .caja-saldo {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: .9rem 1rem;
+}
+.tablero .caja-saldo .rot {
+  display: block;
+  font-size: .66rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #7a7a72;
+}
+.tablero .caja-saldo strong {
+  display: block;
+  margin-top: .2rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tablero .caja-lista {
+  list-style: none;
+  margin: .7rem 0 0;
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.tablero .caja-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .15rem .75rem;
+  padding: .62rem .9rem;
+  border-top: 1px solid var(--borde);
+}
+.tablero .caja-fila:first-child { border-top: 0; }
+/* `anywhere` es lo que evita que un concepto largo —o una carga de inyección
+   escapada— empuje la cifra fuera de la pantalla en 390 px. */
+.tablero .caja-concepto { flex: 1 1 12ch; min-width: 0; overflow-wrap: anywhere; }
+.tablero .caja-valor {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Qué entra y qué sale, de un vistazo. Mismo verde y mismo rojo de la columna
+   de diferencias de los socios: en este tablero ese par de colores ya significa
+   «de más» y «de menos», y no puede significar otra cosa una pestaña más allá. */
+.tablero .caja-fila[data-tipo="suma"] .caja-valor { color: #1f6b3a; }
+.tablero .caja-fila[data-tipo="resta"] .caja-valor { color: #9b2c2c; }
+/* La fila cuyo signo contradice a su tipo pierde el color: una cifra negativa
+   pintada del verde de «entra plata» se lee al revés de lo que dice. Queda en
+   tinta, y el aviso ámbar de abajo explica por qué. Va después de las dos
+   reglas de arriba para ganarles el color. */
+.tablero .caja-fila[data-contradice] .caja-valor { color: var(--tinta); }
+/* El subtotal es un corte, no una fila más: la raya de arriba es más gruesa y
+   el renglón cambia de fondo, como el total de una columna en un papel. */
+.tablero .caja-fila[data-tipo="subtotal"] {
+  border-top: 2px solid #cfcabd;
+  background: #f6f5f1;
+  font-weight: 700;
+}
+
+/* La brecha. Es el número más importante del proyecto y tiene que verse así:
+   bloque propio, del verde de la marca, con la cifra grande. No va en rojo a
+   propósito — es un dato de la cuenta, no una alarma, y el rojo de esta hoja ya
+   está diciendo otra cosa dos bloques más arriba. El signo se lee solo. */
+.tablero .caja-brecha {
+  margin-top: .7rem;
+  background: var(--verde-marca);
+  color: #f3efe4;
+  border-radius: 12px;
+  padding: 1.1rem 1.15rem;
+}
+.tablero .caja-brecha .rot {
+  display: block;
+  font-size: .7rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--dorado);
+  overflow-wrap: anywhere;
+}
+.tablero .caja-brecha strong {
+  display: block;
+  margin-top: .3rem;
+  font-size: 2rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.tablero .caja-brecha-nota { display: block; margin-top: .4rem; font-size: .88rem; color: #c3cdc4; }
+
+/* Lo que hay que ir a mirar a la hoja: un signo que contradice a su tipo, una
+   cuenta que no cuadra. Ámbar, como todo lo demás que en este tablero significa
+   «esto puede estar mal». */
+.tablero .caja-revisar {
+  margin: .8rem 0 0;
+  padding-left: 1.1rem;
+  color: #8a5a00;
+  font-size: .88rem;
+}
+.tablero .caja-revisar li { margin-bottom: .25rem; overflow-wrap: anywhere; }
+
+/* Las notas de la hoja: referencia al pie, en chico. No son plata. */
+.tablero .caja-notas { margin: .9rem 0 0; font-size: .82rem; color: #6b6b6b; }
+.tablero .caja-notas > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .1rem .5rem;
+  padding: .15rem 0;
+}
+.tablero .caja-notas dt { color: #7a7a72; }
+.tablero .caja-notas dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
 /* --- avisos ------------------------------------------------------------- */
 .tablero .avisos h2 { font-size: 1rem; margin: 0 0 .5rem; }
 .tablero .avisos ul { margin: 0; padding-left: 1.1rem; }

@@ -430,6 +430,158 @@ export function construirVistaGastos(egresosPorCategoria) {
   };
 }
 
+// ---- la caja ------------------------------------------------------------
+//
+// La pestaña es una cuenta, no una tabla: empieza en un saldo, le suma y le
+// resta cosas, corta en un subtotal y termina en un resultado. Se lee de arriba
+// abajo y en el orden de la hoja, que es el orden en que la cuenta se explica.
+//
+// El contrato con la hoja es la columna TIPO. Los conceptos y las cifras
+// cambian cada vez que el dueño edita su libro; el papel que juega cada fila,
+// no. Por eso ni un solo texto de la hoja decide acá cómo se pinta algo.
+
+// Los tipos que esta pestaña sabe pintar. Cualquier otro —uno que el dueño
+// invente mañana, una celda con un espacio de más que ya vino en minúsculas
+// desde el worker— cae en 'otro': la fila se muestra igual, con su concepto y
+// su cifra, sin signo forzado y sin realce. Una pestaña que se cae porque
+// apareció un tipo nuevo es peor que una que muestra una fila de más.
+const TIPOS_CAJA = new Set(['saldo', 'suma', 'resta', 'subtotal', 'brecha', 'nota']);
+
+// El tipo sale a un atributo `data-` del HTML. Por eso se traduce a este
+// vocabulario cerrado antes de salir: lo que llega de la hoja nunca entra a un
+// atributo, ni escapado.
+const tipoDeFila = (t) => (TIPOS_CAJA.has(t) ? t : 'otro');
+
+// Las filas que se leen por el SIGNO antes que por la cifra. En una suma y en
+// una resta el signo es el dato —qué entra y qué sale—, y en la brecha dice si
+// falta o si sobra. `pesos` sola devolvería «$-411.847.440», con el menos
+// escondido detrás del signo de pesos.
+const SIGNO_EXPLICITO = new Set(['suma', 'resta', 'brecha']);
+
+// Una cifra en null es raya, nunca $0: un valor que no se pudo leer no puede
+// verse como una fila que vale cero. Un cero de verdad sí sale como «$0».
+function cifraDeCaja(tipo, valor) {
+  if (typeof valor !== 'number' || !Number.isFinite(valor)) return '—';
+  return SIGNO_EXPLICITO.has(tipo) || valor < 0 ? pesosConSigno(valor) : pesos(valor);
+}
+
+// Qué significa el número con el que cierra la cuenta. Sale del signo, no de la
+// hoja: el concepto de la fila ya lo nombra («Brecha de diciembre») y esto
+// contesta la única pregunta que queda.
+function sentidoDeBrecha(valor) {
+  if (typeof valor !== 'number' || !Number.isFinite(valor)) return null;
+  if (valor < 0) return 'Es lo que falta para cerrar la cuenta.';
+  if (valor > 0) return 'Es lo que sobra después de cerrar la cuenta.';
+  return 'La cuenta cierra exacta.';
+}
+
+/**
+ * Arma la pestaña «La caja» a partir de las filas que trae la hoja.
+ *
+ * @param caja lo que trae `construirVistaTablero().caja` (texto YA escapado)
+ *
+ * Devuelve la cuenta repartida en sus cuatro papeles —el saldo de arriba, los
+ * movimientos del medio, la brecha del final y las notas del pie— más lo que
+ * haya que revisar. Las filas conservan el orden de la hoja.
+ *
+ * Los textos de `avisos` mezclan literales de este archivo con el concepto de
+ * la fila, que YA viene escapado de `construirVistaTablero`. No se vuelven a
+ * escapar aguas abajo: hacerlo mostraría «&amp;lt;img» en pantalla.
+ */
+export function construirVistaCaja(caja) {
+  const filas = (caja ?? []).map((f, i) => {
+    const tipo = tipoDeFila(f.tipo);
+    const valor = typeof f.valor === 'number' && Number.isFinite(f.valor) ? f.valor : null;
+    return {
+      indice: i,
+      concepto: f.concepto ?? '',
+      tipo,
+      valor,
+      texto: f.texto ?? '',
+      valorTexto: cifraDeCaja(tipo, valor),
+      // Lo pone el recorrido de abajo cuando el signo contradice al tipo.
+      contradice: false
+    };
+  });
+
+  const notas = filas.filter(f => f.tipo === 'nota');
+  const cuenta = filas.filter(f => f.tipo !== 'nota');
+  // La primera de cada una. Si la hoja trae dos saldos o dos brechas, la
+  // repetida se queda en el medio como una fila más en vez de desaparecer: no
+  // se sabe cuál de las dos es la buena, y esconder una cifra de plata es peor
+  // que mostrarla fuera de su sitio.
+  const saldo = cuenta.find(f => f.tipo === 'saldo') ?? null;
+  const brecha = cuenta.find(f => f.tipo === 'brecha') ?? null;
+  const movimientos = cuenta.filter(f => f !== saldo && f !== brecha);
+
+  const avisos = [];
+
+  // El signo lo trae la hoja y el tipo dice cuál debería ser. Cuando se
+  // contradicen no se corrige ninguno de los dos —enderezar un signo en
+  // silencio es inventar plata—: se muestra lo que dice la hoja y se avisa.
+  //
+  // La fila queda marcada además con `contradice`, y con eso la vista le quita
+  // el color: una fila en verde de «entra plata» con la cifra en negativo se
+  // lee al revés de lo que dice, y el aviso está tres renglones más abajo.
+  for (const f of movimientos) {
+    if (f.valor === null || f.valor === 0) continue;
+    if (f.tipo === 'suma' && f.valor < 0) {
+      f.contradice = true;
+      avisos.push(`«${f.concepto}» está marcada como suma y su valor llega en negativo. Revisá la hoja.`);
+    }
+    if (f.tipo === 'resta' && f.valor > 0) {
+      f.contradice = true;
+      avisos.push(`«${f.concepto}» está marcada como resta y su valor llega en positivo. Revisá la hoja.`);
+    }
+  }
+
+  // La comprobación de la cuenta: la brecha tiene que ser el saldo más todas
+  // las sumas y las restas. Es la cifra que un socio se va a llevar de acá, y
+  // si la hoja se desincroniza —una fila nueva que nadie sumó, un total viejo
+  // pegado a mano— no puede pasar callada.
+  //
+  // Solo se comprueba cuando se PUEDE: hace falta el saldo, la brecha, que
+  // ninguna cifra del camino esté ilegible, que no haya filas de tipo
+  // desconocido —de las que por definición no se sabe si entran a la cuenta— y
+  // que el saldo y la brecha no vengan repetidos, porque ahí tampoco se sabe
+  // cuál de los dos entra. Sin eso queda en null —«no se pudo comprobar»—, que
+  // no es lo mismo que «no cuadra»: acusar a la hoja de descuadre cuando el
+  // que no entiende la cuenta es este archivo la volvería un aviso que nadie
+  // vuelve a mirar.
+  const sumables = cuenta.filter(f => f.tipo === 'suma' || f.tipo === 'resta');
+  const puedeComprobar = saldo !== null && brecha !== null &&
+    !cuenta.some(f => f.tipo === 'otro') &&
+    !movimientos.some(f => f.tipo === 'saldo' || f.tipo === 'brecha') &&
+    saldo.valor !== null && brecha.valor !== null &&
+    !sumables.some(f => f.valor === null);
+  // Se redondea al peso antes de comparar, por lo mismo que en la tabla de
+  // socios: la coma flotante deja ruido de fracciones de peso.
+  const calculada = puedeComprobar
+    ? Math.round(sumables.reduce((t, f) => t + f.valor, saldo.valor))
+    : null;
+  const cuadra = puedeComprobar ? calculada === Math.round(brecha.valor) : null;
+
+  if (cuadra === false) {
+    avisos.push(
+      `La cuenta no cuadra: el saldo con las sumas y las restas da ${pesosConSigno(calculada)} ` +
+      `y la hoja cierra en ${brecha.valorTexto}. Revisá la hoja.`
+    );
+  }
+
+  return {
+    hay: filas.length > 0,
+    saldo,
+    movimientos,
+    brecha,
+    brechaSentido: brecha ? sentidoDeBrecha(brecha.valor) : null,
+    notas,
+    cuadra,
+    calculada,
+    calculadaTexto: calculada === null ? '—' : pesosConSigno(calculada),
+    avisos
+  };
+}
+
 // ---- la tabla de socios -------------------------------------------------
 
 // Un total de columna sobre celdas que pudieron no leerse.

@@ -23,7 +23,8 @@ const PESTANAS = [
   ['Cartera', 'Tablero Cartera'],
   ['Abonos', 'Tablero Abonos'],
   ['Egresos', 'Tablero Egresos'],
-  ['Socios', 'Tablero Socios']
+  ['Socios', 'Tablero Socios'],
+  ['Caja', 'Tablero Caja']
 ];
 
 export async function tokenDeAcceso(credenciales, { fetchImpl = fetch, ahora = new Date() } = {}) {
@@ -186,6 +187,24 @@ const COLUMNA_PARTICIPACION = 1;
 const COLUMNAS_APORTE = [2, 3, 4, 5];
 const COLUMNA_TOTAL = 6;
 
+// «Tablero Caja» tiene tres columnas: A el concepto, B el valor y C el tipo.
+//
+// El TIPO es el contrato de esa pestaña. Los conceptos y las cifras cambian
+// cada vez que el dueño actualiza su libro —una cuota que entra, un
+// compromiso que se paga—, y lo único estable es qué papel juega cada fila en
+// la cuenta. Acá el tipo no se interpreta ni se valida contra una lista: se
+// pasa tal cual, en minúsculas y sin espacios, y la vista decide cómo pintarlo.
+// Un tipo que este archivo no conozca tiene que llegar igual al otro lado.
+const COLUMNA_CONCEPTO_CAJA = 0;
+const COLUMNA_VALOR_CAJA = 1;
+const COLUMNA_TIPO_CAJA = 2;
+
+// La única fila cuya columna B NO es plata: lleva texto —el número de la
+// cuenta, una aclaración al pie—. Pasarla por `numero` la marcaría de
+// ilegible, y ese aviso sería falso: nadie escribió mal un número, ahí nunca
+// hubo uno.
+const TIPO_NOTA = 'nota';
+
 export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
   const avisos = [];
   const cuerpo = (p) => (crudo[p] ?? []).slice(1);
@@ -324,5 +343,36 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     };
   }).filter(Boolean);
 
-  return { leidoEn: ahora.toISOString(), resumen, cartera, egresos, socios, avisos };
+  // --- la caja: en qué termina la cuenta -----------------------------------
+  //
+  // Cada fila es un renglón de una cuenta que empieza en un saldo, le suma y le
+  // resta cosas y termina en un resultado. El orden de la hoja se respeta: es
+  // el orden en que se lee la cuenta, y reordenarla acá sería reescribirla.
+  //
+  // Igual que en los socios, la fila NO se descarta cuando el valor no se puede
+  // leer —descartarla borraría un renglón de la cuenta y el resultado dejaría de
+  // explicarse solo—. La cifra queda en null, que la vista pinta como raya y
+  // nunca como $0, y el aviso dice qué fila hay que ir a mirar.
+  const caja = cuerpo('Caja').map((f, i) => {
+    const fila = f ?? [];
+    // Una fila enteramente en blanco es un renglón de aire entre bloques de la
+    // cuenta, no un dato roto: no hay nada que revisar en ella.
+    if (fila.every((c) => String(c ?? '').trim() === '')) return null;
+
+    const concepto = String(fila[COLUMNA_CONCEPTO_CAJA] ?? '');
+    const tipo = String(fila[COLUMNA_TIPO_CAJA] ?? '').trim().toLowerCase();
+    const crudoValor = fila[COLUMNA_VALOR_CAJA];
+
+    if (tipo === TIPO_NOTA) {
+      return { concepto, valor: null, texto: String(crudoValor ?? ''), tipo };
+    }
+    return {
+      concepto,
+      valor: numero(crudoValor, 'Caja', i + 2, 'Valor'),
+      texto: '',
+      tipo
+    };
+  }).filter(Boolean);
+
+  return { leidoEn: ahora.toISOString(), resumen, cartera, egresos, socios, caja, avisos };
 }

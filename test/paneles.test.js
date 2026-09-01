@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { construirVistaTablero } from '../assets/js/tablero.js';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
-  construirTotalesLotes, mencionaVencido, porcentajePagado
+  construirTotalesLotes, construirVistaCaja, mencionaVencido, porcentajePagado
 } from '../assets/js/paneles.js';
 
 const INV = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
@@ -847,4 +847,267 @@ test('el estado de la diferencia sale de un vocabulario cerrado, apto para un at
   const permitidos = new Set(['exacto', 'de-mas', 'de-menos', 'sin-dato']);
   for (const x of s.socios) assert.ok(permitidos.has(x.diferenciaEstado), x.diferenciaEstado);
   assert.ok(permitidos.has(s.diferenciaTotalEstado));
+});
+
+// ---- la caja ------------------------------------------------------------
+//
+// Una cuenta de juguete con la misma FORMA que la de la hoja: arranca en un
+// saldo, le resta los compromisos de obra, le suma dos cuotas que faltan por
+// entrar, corta en un subtotal, le resta el préstamo y cierra en la brecha.
+// Las cifras están redondeadas y no son las de verdad — no entran al
+// repositorio, ver test/secretos.test.js.
+//
+// Cuadra a propósito: 132 − 104 + 10 + 50 = 88, y 88 − 500 = −412 millones.
+
+const CAJA = [
+  { concepto: 'Saldo en banco al cierre del mes', valor: 132000000, texto: '', tipo: 'saldo' },
+  { concepto: 'Compromisos pendientes de obra', valor: -104000000, texto: '', tipo: 'resta' },
+  { concepto: 'Lote 5 — resto de la cuota vencida', valor: 10000000, texto: '', tipo: 'suma' },
+  { concepto: 'Lote 4 — cuota de octubre', valor: 50000000, texto: '', tipo: 'suma' },
+  { concepto: 'Disponible estimado a diciembre', valor: 88000000, texto: '', tipo: 'subtotal' },
+  { concepto: 'Préstamo a devolver en diciembre', valor: -500000000, texto: '', tipo: 'resta' },
+  { concepto: 'Brecha de diciembre', valor: -412000000, texto: '', tipo: 'brecha' },
+  { concepto: 'Cuenta', valor: null, texto: 'Banco de prueba, ahorros', tipo: 'nota' }
+];
+
+const CON_CAJA = { ...TABLERO, caja: CAJA };
+const cajaDe = (t = CON_CAJA) => construirVistaCaja(vistaDe(t).caja);
+// Una caja armada a mano, sin pasar por el resto del tablero.
+const soloCaja = (filas) => construirVistaCaja(vistaDe({ ...TABLERO, caja: filas }).caja);
+
+test('la cuenta se reparte en saldo, movimientos, brecha y notas', () => {
+  const c = cajaDe();
+  assert.equal(c.hay, true);
+  assert.equal(c.saldo.concepto, 'Saldo en banco al cierre del mes');
+  assert.equal(c.brecha.concepto, 'Brecha de diciembre');
+  assert.equal(c.notas.length, 1);
+  assert.equal(c.notas[0].texto, 'Banco de prueba, ahorros');
+  // En el medio quedan las cuatro filas de la cuenta: ni el saldo, ni la
+  // brecha, ni la nota.
+  assert.deepEqual(c.movimientos.map(m => m.tipo), ['resta', 'suma', 'suma', 'subtotal', 'resta']);
+});
+
+test('los movimientos conservan el orden de la hoja: así se lee la cuenta', () => {
+  const c = cajaDe();
+  assert.deepEqual(c.movimientos.map(m => m.concepto), [
+    'Compromisos pendientes de obra',
+    'Lote 5 — resto de la cuota vencida',
+    'Lote 4 — cuota de octubre',
+    'Disponible estimado a diciembre',
+    'Préstamo a devolver en diciembre'
+  ]);
+});
+
+test('lo que entra y lo que sale se lee por el signo', () => {
+  const c = cajaDe();
+  const por = Object.fromEntries(c.movimientos.map(m => [m.concepto, m.valorTexto]));
+  assert.equal(por['Lote 4 — cuota de octubre'], '+$50.000.000');
+  assert.equal(por['Compromisos pendientes de obra'], '-$104.000.000');
+  assert.equal(por['Préstamo a devolver en diciembre'], '-$500.000.000');
+});
+
+test('el saldo y el subtotal van sin signo: no son ni entrada ni salida', () => {
+  const c = cajaDe();
+  assert.equal(c.saldo.valorTexto, '$132.000.000');
+  const subtotal = c.movimientos.find(m => m.tipo === 'subtotal');
+  assert.equal(subtotal.valorTexto, '$88.000.000');
+});
+
+test('la brecha sale con su signo, sin el menos escondido detrás del peso', () => {
+  const c = cajaDe();
+  assert.equal(c.brecha.valorTexto, '-$412.000.000');
+  assert.ok(!c.brecha.valorTexto.includes('$-'), 'el menos va delante del signo de pesos');
+});
+
+test('la brecha dice qué significa su signo', () => {
+  assert.match(cajaDe().brechaSentido, /falta/i);
+
+  const sobra = soloCaja([{ concepto: 'Brecha', valor: 5000000, texto: '', tipo: 'brecha' }]);
+  assert.match(sobra.brechaSentido, /sobra/i);
+  assert.equal(sobra.brecha.valorTexto, '+$5.000.000');
+
+  const exacta = soloCaja([{ concepto: 'Brecha', valor: 0, texto: '', tipo: 'brecha' }]);
+  assert.match(exacta.brechaSentido, /exacta/i);
+  assert.equal(exacta.brecha.valorTexto, '$0', 'un cero de verdad sí es $0');
+});
+
+test('un valor en null se muestra como raya, jamás como $0', () => {
+  const c = soloCaja([
+    { concepto: 'Saldo en banco', valor: null, texto: '', tipo: 'saldo' },
+    { concepto: 'Cuota por entrar', valor: null, texto: '', tipo: 'suma' },
+    { concepto: 'Brecha', valor: null, texto: '', tipo: 'brecha' }
+  ]);
+  assert.equal(c.saldo.valorTexto, '—');
+  assert.equal(c.movimientos[0].valorTexto, '—');
+  assert.equal(c.brecha.valorTexto, '—');
+  assert.equal(c.brechaSentido, null, 'sin cifra no se puede afirmar si falta o si sobra');
+  const textos = [c.saldo, ...c.movimientos, c.brecha].map(f => f.valorTexto);
+  assert.ok(!textos.includes('$0'), 'ningún null puede salir como $0');
+});
+
+test('un cero real en un movimiento sí se muestra como $0', () => {
+  const c = soloCaja([{ concepto: 'Cuota por entrar', valor: 0, texto: '', tipo: 'suma' }]);
+  assert.equal(c.movimientos[0].valorTexto, '$0');
+});
+
+test('un tipo que la pestaña no conoce se muestra igual, sin romper nada', () => {
+  const c = soloCaja([
+    { concepto: 'Saldo en banco', valor: 100000000, texto: '', tipo: 'saldo' },
+    { concepto: 'Reserva por definir', valor: 5000000, texto: '', tipo: 'provisión-2027' }
+  ]);
+  assert.equal(c.movimientos.length, 1);
+  assert.equal(c.movimientos[0].concepto, 'Reserva por definir');
+  assert.equal(c.movimientos[0].tipo, 'otro');
+  assert.equal(c.movimientos[0].valorTexto, '$5.000.000', 'sin signo forzado: no se sabe si entra o sale');
+});
+
+test('una fila sin tipo tampoco desaparece', () => {
+  const c = soloCaja([{ concepto: 'Algo suelto', valor: 1000, texto: '', tipo: '' }]);
+  assert.equal(c.movimientos.length, 1);
+  assert.equal(c.movimientos[0].tipo, 'otro');
+});
+
+test('el tipo sale de un vocabulario cerrado, apto para un atributo', () => {
+  const permitidos = new Set(['saldo', 'suma', 'resta', 'subtotal', 'brecha', 'nota', 'otro']);
+  const c = soloCaja([...CAJA, { concepto: 'X', valor: 1, texto: '', tipo: '"><script>' }]);
+  for (const f of [c.saldo, c.brecha, ...c.movimientos, ...c.notas]) {
+    assert.ok(permitidos.has(f.tipo), f.tipo);
+  }
+});
+
+test('la pestaña de caja vacía no inventa una cuenta ni un cero', () => {
+  const c = soloCaja([]);
+  assert.equal(c.hay, false);
+  assert.equal(c.saldo, null);
+  assert.equal(c.brecha, null);
+  assert.deepEqual(c.movimientos, []);
+  assert.deepEqual(c.notas, []);
+  assert.deepEqual(c.avisos, []);
+  assert.equal(c.cuadra, null, 'no hay nada que comprobar');
+});
+
+test('sin argumento la caja tampoco revienta', () => {
+  const c = construirVistaCaja(undefined);
+  assert.equal(c.hay, false);
+  assert.equal(c.saldo, null);
+  assert.deepEqual(c.avisos, []);
+});
+
+// La comprobación de la cuenta: la brecha tiene que ser el saldo con todas las
+// sumas y las restas encima. Es la cifra que un socio se lleva de la pestaña.
+test('una cuenta que cuadra no genera ningún aviso', () => {
+  const c = cajaDe();
+  assert.equal(c.cuadra, true);
+  assert.equal(c.calculada, -412000000);
+  assert.deepEqual(c.avisos, []);
+});
+
+test('una brecha que no cuadra con sus propias filas se avisa, sin corregirla', () => {
+  const desfasada = CAJA.map(f => (f.tipo === 'brecha' ? { ...f, valor: -400000000 } : f));
+  const c = soloCaja(desfasada);
+  assert.equal(c.cuadra, false);
+  assert.equal(c.brecha.valorTexto, '-$400.000.000', 'se muestra lo que dice la hoja');
+  assert.equal(c.avisos.length, 1);
+  assert.match(c.avisos[0], /no cuadra/i);
+  assert.match(c.avisos[0], /-\$412\.000\.000/, 'el aviso trae la cifra que da la cuenta');
+});
+
+test('con una cifra ilegible la cuenta no se comprueba: eso no es «no cuadra»', () => {
+  const rota = CAJA.map(f => (f.tipo === 'suma' ? { ...f, valor: null } : f));
+  const c = soloCaja(rota);
+  assert.equal(c.cuadra, null);
+  assert.equal(c.calculadaTexto, '—');
+  assert.deepEqual(c.avisos, [], 'no se puede acusar a la hoja de descuadre sobre un dato que falta');
+});
+
+test('con un tipo desconocido de por medio tampoco se comprueba', () => {
+  const c = soloCaja([...CAJA, { concepto: 'Reserva', valor: 9000000, texto: '', tipo: 'provisión' }]);
+  assert.equal(c.cuadra, null, 'no se sabe si esa fila entra a la cuenta');
+  assert.deepEqual(c.avisos, []);
+});
+
+test('sin saldo o sin brecha no hay nada que comprobar', () => {
+  const sinSaldo = soloCaja(CAJA.filter(f => f.tipo !== 'saldo'));
+  assert.equal(sinSaldo.cuadra, null);
+  const sinBrecha = soloCaja(CAJA.filter(f => f.tipo !== 'brecha'));
+  assert.equal(sinBrecha.cuadra, null);
+});
+
+test('un signo que contradice a su tipo se avisa y no se endereza solo', () => {
+  const alReves = soloCaja([
+    { concepto: 'Saldo en banco', valor: 100000000, texto: '', tipo: 'saldo' },
+    { concepto: 'Préstamo a devolver', valor: 500000000, texto: '', tipo: 'resta' },
+    { concepto: 'Cuota por entrar', valor: -10000000, texto: '', tipo: 'suma' }
+  ]);
+  assert.equal(alReves.movimientos[0].valorTexto, '+$500.000.000', 'se muestra el signo de la hoja');
+  assert.equal(alReves.movimientos[1].valorTexto, '-$10.000.000');
+  assert.equal(alReves.avisos.length, 2);
+  assert.match(alReves.avisos[0], /resta.*positivo/i);
+  assert.match(alReves.avisos[1], /suma.*negativo/i);
+});
+
+test('un cero no dispara el aviso de signo: no entra ni sale nada', () => {
+  const c = soloCaja([{ concepto: 'Cuota por entrar', valor: 0, texto: '', tipo: 'suma' }]);
+  assert.deepEqual(c.avisos, []);
+});
+
+test('un saldo repetido se queda en el medio en vez de desaparecer', () => {
+  const dos = [
+    { concepto: 'Saldo en banco', valor: 100000000, texto: '', tipo: 'saldo' },
+    { concepto: 'Saldo en la otra cuenta', valor: 20000000, texto: '', tipo: 'saldo' }
+  ];
+  const c = soloCaja(dos);
+  assert.equal(c.saldo.concepto, 'Saldo en banco');
+  assert.equal(c.movimientos.length, 1, 'la cifra repetida no se esconde');
+  assert.equal(c.movimientos[0].concepto, 'Saldo en la otra cuenta');
+});
+
+test('las notas van al pie y no entran a la cuenta', () => {
+  const c = cajaDe();
+  assert.ok(!c.movimientos.some(m => m.tipo === 'nota'));
+  assert.equal(c.notas[0].concepto, 'Cuenta');
+  assert.equal(c.notas[0].valorTexto, '—', 'una nota no tiene cifra');
+  assert.equal(c.cuadra, true, 'la nota no descuadra la cuenta');
+});
+
+test('el texto de la caja llega escapado, no interpretado', () => {
+  const CARGA = `<img src=x onerror="window.__xss=1"> '"`;
+  const c = soloCaja([
+    { concepto: CARGA, valor: 1000, texto: '', tipo: 'suma' },
+    { concepto: CARGA, valor: null, texto: CARGA, tipo: 'nota' }
+  ]);
+  assert.doesNotMatch(c.movimientos[0].concepto, /<img/);
+  assert.match(c.movimientos[0].concepto, /&lt;img/);
+  assert.doesNotMatch(c.notas[0].texto, /<img/);
+  assert.match(c.notas[0].texto, /&quot;/);
+});
+
+test('ningún texto de la caja sale con HTML crudo, avisos incluidos', () => {
+  const CARGA = `<img src=x onerror=alert(1)>'"`;
+  const c = soloCaja([
+    { concepto: CARGA, valor: 1000, texto: '', tipo: 'resta' },
+    { concepto: CARGA, valor: null, texto: CARGA, tipo: 'nota' }
+  ]);
+  const textos = [
+    ...c.movimientos.flatMap(m => Object.values(m).filter(x => typeof x === 'string')),
+    ...c.notas.flatMap(n => Object.values(n).filter(x => typeof x === 'string')),
+    ...c.avisos
+  ];
+  assert.ok(textos.length > 0);
+  for (const t of textos) assert.doesNotMatch(t, /<img|<svg|<script/, `salió sin escapar: ${t}`);
+});
+
+test('la fila cuyo signo contradice a su tipo queda marcada para que la vista le quite el color', () => {
+  const c = soloCaja([
+    { concepto: 'Préstamo a devolver', valor: 500000000, texto: '', tipo: 'resta' },
+    { concepto: 'Cuota por entrar', valor: 10000000, texto: '', tipo: 'suma' }
+  ]);
+  assert.equal(c.movimientos[0].contradice, true);
+  assert.equal(c.movimientos[1].contradice, false, 'la fila que sí cuadra con su tipo conserva su color');
+});
+
+test('con un saldo repetido la cuenta tampoco se comprueba: no se sabe cuál entra', () => {
+  const c = soloCaja([...CAJA, { concepto: 'Saldo en la otra cuenta', valor: 20000000, texto: '', tipo: 'saldo' }]);
+  assert.equal(c.cuadra, null);
+  assert.deepEqual(c.avisos, [], 'un descuadre falso es un aviso que nadie vuelve a mirar');
 });
