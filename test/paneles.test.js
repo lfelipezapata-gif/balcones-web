@@ -347,7 +347,7 @@ const cifrasPorEtiqueta = (grupo) =>
 test('son tres grupos, en el orden de los botones y con sus rótulos', () => {
   const { lista } = gruposDe();
   assert.deepEqual(lista.map(g => g.clave), ['todos', 'vendidos', 'sinVender']);
-  assert.deepEqual(lista.map(g => g.etiqueta), ['Todos', 'Vendidos', 'Sin vender']);
+  assert.deepEqual(lista.map(g => g.etiqueta), ['Todos', 'Colocados', 'Sin vender']);
 });
 
 test('«Todos» se queda como está hoy: todos los lotes y ningún resumen', () => {
@@ -380,7 +380,7 @@ test('el grupo «Sin vender» da la misma cifra que la vitrina y la cabecera', (
   assert.match(por.sinVender.nota, /precio de lista/i);
 });
 
-test('el grupo «Vendidos» cuenta el lote en especie, con su área', () => {
+test('el grupo «Colocados» cuenta el lote en especie, con su área', () => {
   const { por } = gruposDe(TABLERO_COMPLETO);
   const c = cifrasPorEtiqueta(por.vendidos);
   // Los seis con cartera más el lote en especie, que ya tiene dueño.
@@ -482,7 +482,7 @@ test('«Sin vender» sin ningún lote lo dice con palabras, no con una fila de c
   assert.equal(por.vendidos.conteo, INV.lotes.length, 'todos quedaron del otro lado');
 });
 
-test('«Vendidos» sin ningún lote tampoco inventa un $0', () => {
+test('«Colocados» sin ningún lote tampoco inventa un $0', () => {
   const nadaVendido = { ...INV, lotes: INV.lotes.map(l => ({ ...l, estado: 'disponible' })) };
   const { por } = gruposDe(TABLERO, nadaVendido);
   assert.equal(por.vendidos.conteo, 0);

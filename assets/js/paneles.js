@@ -223,9 +223,11 @@ const GRUPO_DE_ESTADO = {
   disponible: 'sinVender'
 };
 
+// «Colocados» y no «Vendidos» porque el grupo incluye el lote 2, que no se
+// vendió: se entregó como pago en especie. Decisión del dueño el 1-sep-2026.
 const ETIQUETA_GRUPO = {
   todos: 'Todos',
-  vendidos: 'Vendidos',
+  vendidos: 'Colocados',
   sinVender: 'Sin vender'
 };
 
