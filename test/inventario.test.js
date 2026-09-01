@@ -61,3 +61,30 @@ test('rechaza un área que no sea un entero positivo', () => {
   const malo = { ...inv, lotes: [{ n: 1, sector: 1, area: 0, estado: 'vendido' }] };
   assert.throws(() => validarInventario(malo), /área/);
 });
+
+// La panorámica de un lote es opcional: el sitio se publica con unas pocas y
+// las demás entran después. Lo que no puede entrar es una ruta de afuera —
+// `pano` termina dentro de un <img>/visor en la página de venta, y el día que
+// alguien actualice el JSON de afán pegando un enlace, el sitio queda cargando
+// una imagen de un servidor ajeno.
+const conPano = (pano) => ({
+  ...inv,
+  lotes: [{ n: 1, sector: 1, area: 100, estado: 'disponible', pano }]
+});
+
+test('acepta un lote sin panorámica', () => {
+  assert.doesNotThrow(() => validarInventario(inv));
+});
+
+test('acepta una panorámica local en img/pano', () => {
+  assert.doesNotThrow(() => validarInventario(conPano('img/pano/lote-01.jpg')));
+});
+
+test('rechaza una panorámica que apunte afuera del sitio', () => {
+  for (const malo of ['https://ejemplo.com/pano.jpg', '//ejemplo.com/pano.jpg',
+                      '../../secreto.jpg', 'img/pano/../../portada.jpg',
+                      'img/portada.jpg', 'img/pano/lote-01.png', 7, null]) {
+    assert.throws(() => validarInventario(conPano(malo)), /pano/,
+      `debería rechazar «${malo}»`);
+  }
+});

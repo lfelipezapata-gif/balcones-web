@@ -1,5 +1,17 @@
 export const ESTADOS = ['disponible', 'vendido', 'especie'];
 
+// Ruta de la panorámica 360 de un lote. Es opcional —el sitio se publica con
+// unas pocas y las demás entran después— pero cuando viene tiene que ser un
+// archivo de este mismo repositorio.
+//
+// El patrón es cerrado a propósito, no una comprobación de «no empieza por
+// http». Esa ruta se le entrega al visor dentro de la página de venta: una URL
+// de afuera cargaría una imagen que no controlamos, y un `..` sacaría al
+// visitante del sitio. Cerrando la forma completa —carpeta fija, nombre sin
+// puntos ni barras, extensión fija— no hay que ir adivinando qué otra cosa se
+// puede escribir ahí.
+const RUTA_PANO = /^img\/pano\/[a-z0-9-]+\.jpg$/;
+
 export function validarInventario(json) {
   if (!json || typeof json.precioM2 !== 'number' || json.precioM2 <= 0) {
     throw new Error('El inventario no trae un precio por metro cuadrado válido.');
@@ -22,6 +34,12 @@ export function validarInventario(json) {
     }
     if ('precio' in l) {
       throw new Error(`El lote ${l.n} trae un precio escrito. El precio se calcula.`);
+    }
+    if ('pano' in l && !(typeof l.pano === 'string' && RUTA_PANO.test(l.pano))) {
+      throw new Error(
+        `El lote ${l.n} tiene un «pano» que no es una panorámica de este sitio: ${l.pano}. ` +
+        'Tiene que ser una ruta como img/pano/lote-07.jpg.'
+      );
     }
   }
 }

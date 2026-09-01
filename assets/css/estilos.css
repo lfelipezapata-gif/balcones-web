@@ -84,6 +84,70 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 }
 .leyenda .muestra[data-estado="disponible"] { background: var(--verde); border-color: var(--verde); }
 
+/* ── Ficha de un lote ────────────────────────────────────────────────────
+   Se abre desde el plano y desde las tarjetas. Es un <dialog> nativo: el Esc,
+   el fondo oscuro y el foco atrapado adentro vienen del navegador, no de acá.
+
+   Nada de esta sección puede colgar de `.tablero` ni al revés: este archivo lo
+   comparten la vitrina y el tablero de socios, y ahí abajo hay otra ficha de
+   lote que es de aquel y no de este. */
+.pista { font-size: .9rem; color: #6b6b6b; margin: 1rem 0 0; }
+
+/* El plano y las tarjetas se vuelven pulsables. El cursor y el realce son la
+   única señal de que hay algo detrás: sin esto el plano se ve idéntico a
+   cuando era decorativo. */
+.mapa .lote { cursor: pointer; }
+.mapa .lote:hover { stroke: var(--dorado); stroke-width: 1.6; }
+/* El foco del teclado va por fuera del polígono para que no lo tape el lote de
+   al lado; en SVG el outline del navegador no se dibuja parejo. */
+.mapa .lote:focus-visible { stroke: var(--dorado); stroke-width: 2.4; outline: none; }
+
+.tarjeta { position: relative; }
+.tarjeta:hover { border-color: var(--verde); }
+.tarjeta .abrir {
+  font: inherit; font-size: 1.17rem; font-weight: 700; line-height: 1.2;
+  color: var(--verde); background: none; border: 0; padding: 0;
+  cursor: pointer; text-align: left;
+}
+/* El botón dice «Lote 7» pero se pulsa toda la tarjeta: el ::after se estira
+   sobre ella. Es la forma de que el área y el precio también respondan al dedo
+   sin repetir el nombre del lote en tres elementos pulsables distintos. */
+.tarjeta .abrir::after { content: ''; position: absolute; inset: 0; }
+.tarjeta .abrir:focus-visible { outline: 2px solid var(--verde); outline-offset: 3px; }
+
+.ficha {
+  border: 0; border-radius: 12px; padding: 1.5rem;
+  width: min(28rem, calc(100vw - 2rem));
+  color: var(--tinta); background: #fff;
+}
+.ficha::backdrop { background: rgba(2, 24, 12, .55); }
+.ficha-cerrar-caja { float: right; margin: -.5rem -.5rem 0 0; }
+.ficha-cerrar {
+  font: inherit; font-size: 1.1rem; line-height: 1;
+  background: none; border: 0; color: #6b6b6b; cursor: pointer;
+  padding: .5rem; border-radius: 6px;
+}
+.ficha-cerrar:hover { color: var(--tinta); background: #f1efe8; }
+.ficha-titulo { margin: 0; color: var(--verde); font-size: 1.5rem; }
+/* Gris por omisión y verde solo si el dato dice «disponible», igual que el
+   plano: si algo falla, ningún lote se anuncia como libre. */
+.ficha-estado {
+  display: inline-block; margin: .5rem 0 0;
+  font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: #5b635d; background: #eceee9; border-radius: 999px; padding: .2rem .7rem;
+}
+.ficha-estado[data-estado="disponible"] { color: #fff; background: var(--verde); }
+.ficha-datos { margin: 1.25rem 0 0; }
+.ficha-datos > div {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: .55rem 0; border-bottom: 1px solid var(--borde);
+}
+.ficha-datos dt { color: #6b6b6b; }
+.ficha-datos dd { margin: 0; font-weight: 600; text-align: right; }
+.ficha-precio { font-size: 1.15rem; }
+.ficha .boton { margin-top: 1.25rem; }
+.ficha .boton[hidden] { display: none; }
+
 .tablero .frescura { color: #6b6b6b; font-size: .9rem; margin: .25rem 0 0; }
 .tablero .alerta {
   background: #fff4e0; border: 1px solid #e8c98a;
