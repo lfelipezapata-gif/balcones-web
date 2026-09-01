@@ -3,6 +3,12 @@ main = "src/index.js"
 compatibility_date = "2026-08-31"
 
 [vars]
+# Se llenan cuando exista el proyecto de Google Cloud. Mientras GOOGLE_CLIENT_ID
+# esté vacío, el Worker responde 500 de configuración a todo el mundo — a
+# propósito: con el identificador vacío, Google apaga la verificación de
+# destinatario y entraría cualquiera. Ver worker/src/auth.js.
 GOOGLE_CLIENT_ID = ""
 ID_HOJA_ESPEJO = ""
-ORIGEN_PERMITIDO = ""
+
+# El sitio en GitHub Pages. Es el único origen al que el Worker le responde.
+ORIGEN_PERMITIDO = "https://lfelipezapata-gif.github.io"
