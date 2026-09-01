@@ -167,6 +167,47 @@ export function fechaLegible(valor) {
   return String(valor ?? '');
 }
 
+/**
+ * El instante que representa una celda de fecha, para poder ORDENAR por ella.
+ *
+ * Existe aparte de `fechaLegible` porque son dos preguntas distintas: aquella
+ * contesta «cómo se escribe esto» y esta «qué va antes». Ordenar por el texto
+ * que devuelve la otra está mal y no se nota hasta que cambia el mes:
+ * «05/09/2026» va antes que «19/08/2026» en orden alfabético y después en el
+ * calendario.
+ *
+ * Entiende las tres formas en que puede llegar la celda: el número serial de
+ * Sheets —que es lo normal con `UNFORMATTED_VALUE`—, «dd/mm/aaaa» y
+ * «aaaa-mm-dd», que es lo que aparece cuando alguien la escribió a mano como
+ * texto. Todas salen en la misma escala (milisegundos UTC) para que se puedan
+ * comparar entre sí: mezclar seriales con años en la misma comparación daría
+ * un orden inventado.
+ *
+ * Devuelve null cuando no hay fecha que ordenar —la celda vacía de un abono
+ * «Sin desglose», por ejemplo—. Esas filas van al final.
+ */
+export function instanteDeFecha(valor) {
+  if (typeof valor === 'number' && Number.isFinite(valor)) {
+    if (valor < 1) return null;
+    return EPOCA_SHEETS + Math.round(valor) * DIA;
+  }
+  const t = String(valor ?? '').trim();
+  const barras = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);
+  if (barras) return Date.UTC(Number(barras[3]), Number(barras[2]) - 1, Number(barras[1]));
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  if (iso) return Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  return null;
+}
+
+// Compara dos abonos por su fecha. Lo que no tiene fecha va al final: un abono
+// sin fecha no es «el más viejo», es uno del que no se sabe cuándo entró.
+function porFecha(a, b) {
+  if (a.orden === null && b.orden === null) return 0;
+  if (a.orden === null) return 1;
+  if (b.orden === null) return -1;
+  return a.orden - b.orden;
+}
+
 // Las seis filas que el Resumen tiene que traer. Si falta alguna, se avisa por su nombre.
 const CONCEPTOS_RESUMEN = [
   ['Vendido', 'vendido'],
@@ -256,7 +297,14 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     const valor = numero(f[2], 'Abonos', i + 2, 'Valor');
     if (lote === null || valor === null) return;
     if (!abonosPorLote.has(lote)) abonosPorLote.set(lote, []);
-    abonosPorLote.get(lote).push({ fecha: fechaLegible(f[0]), valor, medio: String(f[3] ?? '') });
+    // `orden` sale del valor CRUDO de la celda, antes de formatearlo, y es
+    // interno: se usa para ordenar y no viaja al navegador.
+    abonosPorLote.get(lote).push({
+      orden: instanteDeFecha(f[0]),
+      fecha: fechaLegible(f[0]),
+      valor,
+      medio: String(f[3] ?? '')
+    });
   });
 
   const cartera = cuerpo('Cartera').map((f, i) => {
@@ -288,7 +336,10 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
       promesa: fechaLegible(f[9]),
       // Se copia antes de ordenar: `.sort()` ordena en sitio y dos filas con el mismo
       // lote recibían la MISMA instancia guardada en el Map, así que una mutaba a la otra.
-      abonos: [...(abonosPorLote.get(lote) ?? [])].sort((a, b) => a.fecha.localeCompare(b.fecha))
+      // El `orden` se quita al final: sirvió para ordenar y no es asunto del navegador.
+      abonos: [...(abonosPorLote.get(lote) ?? [])]
+        .sort(porFecha)
+        .map(({ orden, ...abono }) => abono)
     };
   }).filter(Boolean);
 

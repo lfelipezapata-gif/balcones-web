@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPair, exportPKCS8, decodeJwt } from 'jose';
-import { tokenDeAcceso, leerEspejo, aNumero, normalizarTablero, fechaLegible } from '../src/sheets.js';
+import {
+  tokenDeAcceso, leerEspejo, aNumero, normalizarTablero, fechaLegible, instanteDeFecha
+} from '../src/sheets.js';
 
 const AHORA = new Date('2026-08-31T21:50:00.000Z');
 
@@ -691,4 +693,82 @@ test('el nombre del socio llega crudo: escaparlo es tarea de la vista', () => {
   };
   const t = normalizarTablero(malicioso, { ahora: AHORA });
   assert.equal(t.socios[0].nombre, '<img src=x onerror=alert(1)>');
+});
+
+// --- El orden de los abonos: por calendario, no por texto ----------------
+
+test('instanteDeFecha entiende el serial de Sheets, dd/mm/aaaa y aaaa-mm-dd', () => {
+  // 46253 es el 19 de agosto de 2026: el mismo día por los tres caminos.
+  const serial = instanteDeFecha(46253);
+  assert.equal(serial, instanteDeFecha('19/08/2026'), 'el serial y el texto con barras son el mismo día');
+  assert.equal(serial, instanteDeFecha('2026-08-19'), 'y el ISO también');
+  assert.equal(fechaLegible(46253), '19/08/2026', 'coincide con lo que se muestra');
+
+  assert.equal(instanteDeFecha(''), null, 'la celda vacía no tiene orden');
+  assert.equal(instanteDeFecha('Sin desglose'), null);
+  assert.equal(instanteDeFecha(undefined), null);
+  assert.equal(instanteDeFecha(0), null, 'por debajo del serial 1 no es una fecha');
+});
+
+test('los abonos salen en orden de calendario aunque cambien de mes', () => {
+  // Es el caso que el orden alfabético invertía: «05/09/2026» va antes que
+  // «19/08/2026» como texto, y después en el calendario. Con los tres abonos de
+  // agosto que había no se notaba; con uno de septiembre, sí.
+  const conSeptiembre = {
+    ...CRUDO,
+    Abonos: [
+      ['Fecha', 'Lote', 'Valor', 'Medio'],
+      [46270, '1', '5000000', 'Transferencia'],   // 05/09/2026
+      [46253, '1', '30000000', 'Transferencia'],  // 19/08/2026
+      [46255, '1', '10000000', 'Transferencia']   // 21/08/2026
+    ]
+  };
+  const t = normalizarTablero(conSeptiembre, { ahora: AHORA });
+  const uno = t.cartera.find(c => c.lote === 1);
+  assert.deepEqual(uno.abonos.map(a => a.fecha), ['19/08/2026', '21/08/2026', '05/09/2026']);
+});
+
+test('el abono sin fecha va al final, no de primero', () => {
+  // «Sin desglose» es un monto que se registró antes de que se llevara el
+  // detalle. No es el más viejo: es uno del que no se sabe cuándo entró.
+  const conSinFecha = {
+    ...CRUDO,
+    Abonos: [
+      ['Fecha', 'Lote', 'Valor', 'Medio'],
+      ['', '1', '200000000', 'Sin desglose'],
+      [46253, '1', '30000000', 'Transferencia']
+    ]
+  };
+  const t = normalizarTablero(conSinFecha, { ahora: AHORA });
+  const uno = t.cartera.find(c => c.lote === 1);
+  assert.deepEqual(uno.abonos.map(a => a.fecha), ['19/08/2026', '']);
+  assert.deepEqual(uno.abonos.map(a => a.valor), [30000000, 200000000]);
+});
+
+test('el orden es interno: no viaja al navegador', () => {
+  const t = normalizarTablero(CRUDO, { ahora: AHORA });
+  for (const c of t.cartera) {
+    for (const a of c.abonos) {
+      assert.deepEqual(Object.keys(a).sort(), ['fecha', 'medio', 'valor'],
+        'el campo con el que se ordenó no es asunto del cliente');
+    }
+  }
+});
+
+test('ordenar los abonos no cambia cuánto suman', () => {
+  // La suma es la que tiene que cuadrar con el «Abonado» del resumen. Ordenar
+  // no puede perder ni duplicar una fila.
+  const revuelto = {
+    ...CRUDO,
+    Abonos: [
+      ['Fecha', 'Lote', 'Valor', 'Medio'],
+      [46270, '1', '5000000', 'Transferencia'],
+      ['', '1', '200000000', 'Sin desglose'],
+      [46253, '1', '30000000', 'Transferencia']
+    ]
+  };
+  const t = normalizarTablero(revuelto, { ahora: AHORA });
+  const uno = t.cartera.find(c => c.lote === 1);
+  assert.equal(uno.abonos.length, 3);
+  assert.equal(uno.abonos.reduce((s, a) => s + a.valor, 0), 235000000);
 });
