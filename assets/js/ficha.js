@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote } from './inventario.js';
-import { pesos, metros } from './formato.js';
+import { validarInventario, precioDeLote } from './inventario.js?v=1a8a0b7e';
+import { pesos, metros } from './formato.js?v=1a8a0b7e';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -138,11 +138,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css';
+    css.href = 'vendor/pannellum.css?v=1a8a0b7e';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js';
+    js.src = 'vendor/pannellum.js?v=1a8a0b7e';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -272,6 +272,25 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     agrandar(false);
   });
 
+  // Soltar el visor al cerrar NO puede depender del evento `close`.
+  //
+  // Se comprobo el 2-sep-2026: hay navegadores donde `dialogo.close()` cierra
+  // el dialogo y el evento nunca llega. Con eso, el visor quedaba vivo con la
+  // ficha cerrada — un contexto de WebGL retenido y la panoramica girando sola
+  // en segundo plano, gastando bateria por una foto que nadie esta viendo.
+  //
+  // Mirar el atributo `open` sirve pase lo que pase: lo quita el boton de la
+  // X (que es un <form method="dialog">), el Esc, `close()` y cualquier otra
+  // via que aparezca. Es el estado, no el aviso de que el estado cambio.
+  const observador = new MutationObserver(() => {
+    if (dialogo.open) return;
+    soltarPano();
+    dialogo.classList.remove('agrandada');
+  });
+  observador.observe(dialogo, { attributes: true, attributeFilter: ['open'] });
+
+  // Se deja tambien el evento, que es lo correcto donde si llega. `soltarPano`
+  // no molesta si ya se solto.
   dialogo.addEventListener('close', () => {
     soltarPano();
     dialogo.classList.remove('agrandada');

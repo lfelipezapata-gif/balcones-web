@@ -15,21 +15,20 @@ test('las 14 áreas suman 34.921 m²', () => {
   assert.equal(resumenInventario(inv).areaTotal, 34921);
 });
 
-test('los disponibles suman 13.908 m² y valen 1.529.880.000', () => {
+test('los disponibles suman 16.668 m² y valen 1.833.480.000', () => {
   const r = resumenInventario(inv);
-  assert.equal(r.disponibles, 6);
-  assert.equal(r.areaDisponible, 13908);
-  assert.equal(r.valorDisponible, 1529880000);
+  assert.equal(r.disponibles, 7);
+  assert.equal(r.areaDisponible, 16668);
+  assert.equal(r.valorDisponible, 1833480000);
 });
 
-// El lote 12 salió de la venta el 2-sep-2026 por decisión del dueño. Antes de
-// eso los disponibles eran 7 y sumaban 16.668 m² por $1.833.480.000.
-test('el lote 12 está reservado y sus 2.760 m² no cuentan como disponibles', () => {
+// El lote 12 estuvo reservado unas horas el 2-sep-2026 y volvió a la venta el
+// mismo día. El estado «reservado» se queda: existe, está probado y sirve el
+// día que se reserve otro.
+test('hoy no hay ningún lote reservado', () => {
   const r = resumenInventario(inv);
-  assert.equal(inv.lotes.find(l => l.n === 12).estado, 'reservado');
-  assert.equal(r.reservados, 1);
-  assert.equal(r.areaReservada, 2760);
-  assert.equal(r.areaDisponible + r.areaReservada, 16668);
+  assert.equal(r.reservados, 0);
+  assert.equal(inv.lotes.find(l => l.n === 12).estado, 'disponible');
 });
 
 test('los colocados suman 18.253 m² y los vendidos 15.507 m²', () => {

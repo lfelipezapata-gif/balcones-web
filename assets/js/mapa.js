@@ -1,5 +1,5 @@
-import { validarInventario, resumenInventario } from './inventario.js';
-import { metros } from './formato.js';
+import { validarInventario, resumenInventario } from './inventario.js?v=1a8a0b7e';
+import { metros } from './formato.js?v=1a8a0b7e';
 
 // El plano de lotes se pinta desde data/lotes.json.
 //
@@ -23,7 +23,12 @@ import { metros } from './formato.js';
 // en la pagina publica seria de los pocos textos que un socio puede leer y
 // saber que no es cierto.
 const MARCA = {
-  vendido: 'VENDIDO'
+  vendido: 'VENDIDO',
+  // El lote 2 se entrego como pago en especie. Para adentro sigue siendo
+  // «especie» —el tablero de socios lo separa, y por el no entro un peso—,
+  // pero de cara al publico lo unico que importa es que no esta en venta.
+  // Decision de Luis Felipe el 2-sep-2026: que diga VENDIDO como los demas.
+  especie: 'VENDIDO'
 };
 
 // Cómo se lee cada estado en el plano. «especie» es un lote entregado como

@@ -163,7 +163,7 @@ test('si se vende un lote, el plano lo pinta gris sin tocar el SVG', () => {
   assert.equal(despues.lotes.find(l => l.n === 6).estado, 'vendido');
   assert.equal(despues.lotes.find(l => l.n === 6).descripcion, 'Lote 6 · 2.140 m² · vendido');
   assert.equal(despues.titulo,
-    'Plano del loteo. 5 lotes disponibles en verde, 8 colocados en gris, 1 reservado en dorado.');
+    'Plano del loteo. 6 lotes disponibles en verde, 8 colocados en gris.');
   // Y el archivo del plano no se tocó: la misma geometría sirve para los dos.
   assert.equal(readFileSync(new URL('../img/mapa.svg', import.meta.url), 'utf8'), SVG);
 });
@@ -172,11 +172,10 @@ test('el título del plano cuenta lo mismo que el titular de la vitrina', () => 
   const v = construirVistaMapa(INV);
   const cuenta = (e) => INV.lotes.filter(l => l.estado === e).length;
   const disponibles = cuenta('disponible');
-  const reservados = cuenta('reservado');
   const colocados = cuenta('vendido') + cuenta('especie');
   assert.equal(v.titulo,
     `Plano del loteo. ${disponibles} lotes disponibles en verde, ` +
-    `${colocados} colocados en gris, ${reservados} reservado en dorado.`);
+    `${colocados} colocados en gris.`);
 });
 
 test('el título de cada sector sale del inventario, no está escrito a mano', () => {
@@ -238,9 +237,9 @@ test('pintar le pone a cada polígono el estado que dice el inventario', () => {
   assert.equal(estado(6), 'disponible');
   assert.equal(estado(1), 'vendido');
   assert.equal(estado(2), 'especie');
-  assert.equal(estado(12), 'reservado');
+  assert.equal(estado(12), 'disponible');
   const verdes = svg.todos.filter(t => t.clase === 'lote' && t.atributos['data-estado'] === 'disponible');
-  assert.equal(verdes.length, 6);
+  assert.equal(verdes.length, 7);
 });
 
 test('pintar se niega si el plano y el inventario no hablan de los mismos lotes', () => {
@@ -271,16 +270,19 @@ test('los lotes vendidos llevan la palabra encima y los demás no', () => {
   const marca = (n) => v.lotes.find(l => l.n === n).marcaTexto;
   assert.equal(marca(1), 'VENDIDO');
   assert.equal(marca(6), '', 'un lote disponible no lleva marca');
-  assert.equal(marca(12), '', 'un lote reservado no está vendido');
+  assert.equal(marca(12), '', 'el 12 volvió a estar en venta');
 });
 
-// El lote 2 se entregó como pago en especie: no se vendió y por él no entró
-// dinero. Se pinta gris como los colocados —no está en venta— pero decirle
-// «VENDIDO» sería falso, y es de los pocos textos que un socio podría leer
-// en la página pública y saber que no es cierto.
-test('el lote entregado en especie no dice VENDIDO', () => {
+// El lote 2 se entregó como pago en especie. Para adentro sigue siendo
+// «especie» —el tablero de socios lo separa de los vendidos, y por él no entró
+// un peso— pero en la página pública dice VENDIDO como los demás: lo único que
+// le importa a quien mira es que no está en venta. Decisión del dueño el
+// 2-sep-2026, después de haberlo dejado sin marca.
+test('el lote en especie dice VENDIDO afuera y sigue siendo especie adentro', () => {
   const v = construirVistaMapa(INV);
   const dos = v.lotes.find(l => l.n === 2);
-  assert.equal(dos.estado, 'especie');
-  assert.equal(dos.marcaTexto, '');
+  assert.equal(dos.estado, 'especie', 'el estado interno no cambia');
+  assert.equal(dos.marcaTexto, 'VENDIDO');
+  assert.match(dos.descripcion, /pago en especie/,
+    'el lector de pantalla sí oye la verdad completa');
 });
