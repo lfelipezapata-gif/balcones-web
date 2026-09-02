@@ -155,3 +155,34 @@ test('el CSS define el modo agrandado del diálogo', () => {
   assert.match(css, /\.ficha\.agrandada\s*\{/, 'falta la regla .ficha.agrandada');
   assert.match(css, /\.ficha\.agrandada\s+\.ficha-pano\b/, 'la vista no se estira al agrandar');
 });
+
+// ── El enlace al mapa ───────────────────────────────────────────────────────
+// «A 3,5 km del parque» no le dice nada a alguien que no conoce Santa Rosa.
+// El alfiler sí: abre Google Maps en el punto exacto del lote y desde ahí se
+// ve el satélite, la vía de llegada y cuánto hay hasta el pueblo.
+const conCoords = {
+  ...inv,
+  lotes: [{ n: 7, sector: 1, area: 2129, estado: 'disponible',
+            lat: 6.650564, lon: -75.44552 }]
+};
+
+test('la ficha arma el enlace al mapa con la coordenada del lote', () => {
+  const f = construirFichaLote(conCoords, 7);
+  const u = new URL(f.mapa);
+  assert.equal(u.host, 'www.google.com');
+  assert.equal(u.searchParams.get('query'), '6.650564,-75.44552');
+});
+
+test('sin coordenada no hay enlace, en vez de uno que caiga en el mar', () => {
+  const sin = { ...inv, lotes: [{ n: 7, sector: 1, area: 2129, estado: 'disponible' }] };
+  assert.equal(construirFichaLote(sin, 7).mapa, null);
+});
+
+// Un lote colocado también se puede ubicar: quien mira quiere saber dónde
+// quedó lo que se vendió. Lo que no lleva es el botón de pedirlo.
+test('un lote vendido también trae su enlace al mapa', () => {
+  const vend = { ...conCoords, lotes: [{ ...conCoords.lotes[0], estado: 'vendido' }] };
+  const f = construirFichaLote(vend, 7);
+  assert.equal(f.whatsapp, null);
+  assert.ok(f.mapa);
+});

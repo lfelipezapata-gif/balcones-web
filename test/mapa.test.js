@@ -261,3 +261,26 @@ test('un inventario inválido no llega a pintarse', () => {
     lotes: [{ n: 1, sector: 1, area: 100, estado: 'permutado' }]
   }));
 });
+
+// ── La palabra «VENDIDO» sobre el lote ──────────────────────────────────────
+// Sobre la ortofoto el color solo no alcanza: un verde translucido y un gris
+// translucido sobre pasto verde se parecen mas de lo que uno cree. La palabra
+// lo cierra.
+test('los lotes vendidos llevan la palabra encima y los demás no', () => {
+  const v = construirVistaMapa(INV);
+  const marca = (n) => v.lotes.find(l => l.n === n).marcaTexto;
+  assert.equal(marca(1), 'VENDIDO');
+  assert.equal(marca(6), '', 'un lote disponible no lleva marca');
+  assert.equal(marca(12), '', 'un lote reservado no está vendido');
+});
+
+// El lote 2 se entregó como pago en especie: no se vendió y por él no entró
+// dinero. Se pinta gris como los colocados —no está en venta— pero decirle
+// «VENDIDO» sería falso, y es de los pocos textos que un socio podría leer
+// en la página pública y saber que no es cierto.
+test('el lote entregado en especie no dice VENDIDO', () => {
+  const v = construirVistaMapa(INV);
+  const dos = v.lotes.find(l => l.n === 2);
+  assert.equal(dos.estado, 'especie');
+  assert.equal(dos.marcaTexto, '');
+});

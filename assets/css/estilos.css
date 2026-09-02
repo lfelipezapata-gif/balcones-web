@@ -90,10 +90,15 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
    Una unidad del viewBox es un PUNTO del plano original, no un metro: 1 pt =
    0,3175 m. Por eso los tamanos de letra son ~3 veces los del plano
    esquematico para el mismo tamano aparente. */
-.aereo .lote { fill: rgba(90, 96, 88, .45); stroke: #fff; stroke-width: 2.2; }
-.aereo .lote[data-estado="disponible"] { fill: rgba(47, 107, 63, .52); }
-.aereo .lote[data-estado="disponible"] { stroke-dasharray: 13 9; stroke-width: 4; }
-.aereo .lote[data-estado="reservado"] { fill: rgba(200, 161, 62, .60); }
+/* Los que NO se han vendido van OSCUROS y opacos: son los unicos que el
+   visitante tiene que reconocer de un vistazo, y un verde translucido sobre
+   pasto verde no se distingue. Los colocados se van al otro lado —claros y
+   muy transparentes— para que se lean como fondo y no compitan. */
+.aereo .lote { fill: rgba(226, 228, 222, .34); stroke: #fff; stroke-width: 2.2; }
+.aereo .lote[data-estado="disponible"] {
+  fill: rgba(16, 61, 30, .82); stroke-dasharray: 13 9; stroke-width: 4;
+}
+.aereo .lote[data-estado="reservado"] { fill: rgba(150, 112, 20, .82); }
 .aereo .lote:hover { stroke: var(--dorado); stroke-width: 5; }
 .aereo .lote:focus-visible { stroke: var(--dorado); stroke-width: 7; outline: none; }
 
@@ -106,10 +111,27 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   fill: #fff; font-size: 46px; font-weight: 600; text-anchor: middle;
   letter-spacing: .06em;
 }
-.aereo .rotulo-lote .numero { font-size: 40px; fill: #fff; }
-.aereo .rotulo-lote .area { font-size: 23px; fill: rgba(255,255,255,.88); }
-.aereo .rotulo-lote[data-estado="reservado"] .numero,
-.aereo .rotulo-lote[data-estado="reservado"] .area { fill: #2a2103; }
+.aereo .rotulo-lote { text-anchor: middle; }
+.aereo .rotulo-lote .numero { font-size: 52px; font-weight: 700; fill: #fff; }
+.aereo .rotulo-lote .area { font-size: 26px; fill: rgba(255, 255, 255, .9); }
+.aereo .rotulo-lote .marca {
+  font-size: 27px; font-weight: 700; letter-spacing: .08em; fill: #4a5148;
+}
+/* Sobre los lotes claros el texto blanco desaparece. */
+.aereo .rotulo-lote[data-estado="vendido"] .numero,
+.aereo .rotulo-lote[data-estado="especie"] .numero { fill: #3f4740; }
+.aereo .rotulo-lote[data-estado="vendido"] .area,
+.aereo .rotulo-lote[data-estado="especie"] .area { fill: #5c6459; }
+
+/* EN CELULAR el plano entero mide 375 px para 540 m de finca: el area y la
+   palabra «VENDIDO» salen a 5 px y no se leen, solo estorban al numero. Se
+   quedan el numero, mas grande, y el color. La palabra vuelve desde 700 px,
+   que es donde empieza a leerse. */
+@media (max-width: 699px) {
+  .aereo .rotulo-lote .area,
+  .aereo .rotulo-lote .marca { display: none; }
+  .aereo .rotulo-lote .numero { font-size: 68px; }
+}
 
 /* El plano es alto y flaco porque el predio lo es: 420 m de largo por 150 de
    ancho. A todo el ancho de una pantalla de escritorio no cabe a lo alto, así
@@ -296,6 +318,15 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .ficha-datos dt { color: #6b6b6b; }
 .ficha-datos dd { margin: 0; font-weight: 600; text-align: right; }
 .ficha-precio { font-size: 1.15rem; }
+.ficha-mapa {
+  display: inline-block; margin-top: 1.1rem;
+  color: var(--verde); font-weight: 600; text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+.ficha-mapa[hidden] { display: none; }
+.ficha-mapa::before { content: '◎ '; }
+.ficha.agrandada .ficha-mapa { display: none; }
+
 .ficha .boton { margin-top: 1.25rem; }
 .ficha .boton[hidden] { display: none; }
 

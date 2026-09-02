@@ -14,15 +14,15 @@ COORDENADAS. Los linderos salen del CAD del arquitecto, que es el vigente.
 
 LA GEORREFERENCIACION, COMPROBADA POR TRES VIAS QUE NO DEPENDEN ENTRE SI
 -----------------------------------------------------------------------
-  1. El perimetro rojo del plano mide 206.034 m2 contra los 206.034 m2 que
+  1. El perimetro rojo del plano mide 206034 m2 contra los 206034 m2 que
      declara el rotulo.
   2. La cuadricula va a 472,41 pt cada 150 m -> 3,14940 pt/m.
   3. Proyectando con esa escala, los 14 lotes del CAD caen dentro del marco.
 
 Las tres escalas coinciden dentro del 0,01 %.
 
-      x_pagina = 396,4  + 3,14940 * (Este  - 4.729.200)
-      y_pagina = 2353,8 - 3,14940 * (Norte - 2.293.200)
+      x_pagina = 396,4  + 3,14940 * (Este  - 4729200)
+      y_pagina = 2353,8 - 3,14940 * (Norte - 2293200)
 
 Los dos numeros de anclaje se leyeron de los rotulos del plano: «4729200E» en
 la vertical de x=396,4 y «2293200N» en la horizontal de y=2353,8.
@@ -118,7 +118,7 @@ def leer_perimetro(pagina):
     """El perimetro rojo de la finca, en puntos de pagina.
 
     Es la unica geometria que se toma del plano, y sirve de control: su area
-    tiene que dar los 206.034 m2 del rotulo.
+    tiene que dar los 206034 m2 del rotulo.
     """
     mejor = None
     for d in pagina.get_drawings():
@@ -134,10 +134,10 @@ def leer_perimetro(pagina):
     m2 = area(mejor) / (ESCALA ** 2)
     if abs(m2 - 206_034) / 206_034 > 0.01:
         raise SystemExit(
-            f"El perimetro del plano mide {m2:,.0f} m2 y deberia medir 206.034. "
+            f"El perimetro del plano mide {m2:,.0f} m2 y deberia medir 206034. "
             "O el plano cambio, o la georreferenciacion de este script ya no aplica."
         )
-    print(f"  perimetro de la finca: {m2:,.0f} m2  (control: 206.034)")
+    print(f"  perimetro de la finca: {m2:,.0f} m2  (control: 206034)")
     return mejor
 
 
@@ -293,6 +293,79 @@ def numerar(georref, inventario):
     return asignado
 
 
+def escribir_coordenadas(lotes, inventario):
+    """Le pone a cada lote su latitud y longitud, para el enlace al mapa.
+
+    El CAD viene en EPSG:9377 (MAGNA-SIRGAS / Origen-Nacional), que es lo que
+    declara el plano. Google no entiende eso: hay que pasarlo a WGS84.
+
+    Se usa el punto INTERIOR del poligono y no el centroide. Varios lotes son
+    concavos -- el 11 tiene un arco y el 12 es un triangulo con una cola larga
+    -- y el centroide se les sale o cae en la parte flaca. Un alfiler que cae
+    fuera del lote que dice senalar es peor que no poner alfiler.
+    """
+    try:
+        from pyproj import Transformer
+    except ImportError:
+        sys.exit("Falta pyproj. Se instala con:  python3 -m pip install pyproj")
+
+    t = Transformer.from_crs("EPSG:9377", "EPSG:4326", always_xy=True)
+    porNumero = {l["n"]: l for l in inventario["lotes"]}
+    for n, pts in lotes.items():
+        e, nn = punto_interior(pts)
+        lon, lat = t.transform(e, nn)
+        porNumero[n]["lat"] = round(lat, 6)
+        porNumero[n]["lon"] = round(lon, 6)
+
+    ruta = RAIZ / "data" / "lotes.json"
+    ruta.write_text(json.dumps(inventario, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+    print(f"  coordenadas escritas en data/lotes.json ({len(lotes)} lotes)")
+
+
+def punto_interior(pts):
+    """El punto mas adentro del poligono, por rejilla gruesa y despues fina."""
+    xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+    def dentro(x, y):
+        d = False; j = len(pts) - 1
+        for i in range(len(pts)):
+            xi, yi = pts[i]; xj, yj = pts[j]
+            if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / (yj - yi) + xi:
+                d = not d
+            j = i
+        return d
+    def al_borde(x, y):
+        d = math.inf; j = len(pts) - 1
+        for i in range(len(pts)):
+            xi, yi = pts[i]; xj, yj = pts[j]
+            dx, dy = xj - xi, yj - yi
+            L = dx * dx + dy * dy
+            u = 0.0 if L == 0 else max(0.0, min(1.0, ((x-xi)*dx + (y-yi)*dy) / L))
+            d = min(d, math.hypot(x - (xi + u*dx), y - (yi + u*dy)))
+            j = i
+        return d if dentro(x, y) else -d
+
+    mejor, md = None, -math.inf
+    x = min(xs)
+    while x <= max(xs):
+        y = min(ys)
+        while y <= max(ys):
+            d = al_borde(x, y)
+            if d > md: mejor, md = (x, y), d
+            y += 2.0
+        x += 2.0
+    mx, my = mejor
+    x = mx - 2.0
+    while x <= mx + 2.0:
+        y = my - 2.0
+        while y <= my + 2.0:
+            d = al_borde(x, y)
+            if d > md: mejor, md = (x, y), d
+            y += 0.25
+        x += 0.25
+    return mejor
+
+
 # --------------------------------------------------------------------------
 # salida
 # --------------------------------------------------------------------------
@@ -326,6 +399,7 @@ def main():
 
     lotes = numerar(georref, inventario)
     print(f"  ubicados en la ortofoto: {len(lotes)} de {len(inventario['lotes'])}")
+    escribir_coordenadas(lotes, inventario)
 
     # recorte alrededor del perimetro
     xs = [p[0] for p in per]; ys = [p[1] for p in per]
@@ -386,8 +460,9 @@ def main():
         cy = sum(q[1] for q in v) / len(v)
         partes.append(f'  <g class="rotulo-lote" data-lote="{n}" '
                       f'transform="translate({cx:.1f} {cy:.1f})">'
-                      f'<text class="numero" y="-2"></text>'
-                      f'<text class="area" y="12"></text></g>')
+                      f'<text class="numero" y="-8"></text>'
+                      f'<text class="area" y="18"></text>'
+                      f'<text class="marca" y="42"></text></g>')
     partes.append("</svg>")
 
     ruta_svg = DESTINO / "mapa-aereo.svg"

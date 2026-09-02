@@ -30,6 +30,18 @@ const ETIQUETA = {
 // venta. Para la vitrina lo único que importa es si se puede pedir.
 const seVende = (estado) => estado === 'disponible';
 
+// El alfiler en Google Maps. Se usa la forma documentada de la API de enlaces
+// (`/maps/search/?api=1&query=`) y no una URL con parametros internos: esa es
+// la unica que Google se compromete a mantener, abre la app en el telefono en
+// vez del navegador, y clava el alfiler en el punto exacto.
+//
+// Se pone Maps y no Earth aunque el pedido fuera Earth: el enlace de Earth web
+// no tiene forma documentada y en un telefono no abre la app. Desde Maps, ver
+// el satelite es un toque.
+function enlaceMapa(lat, lon) {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+}
+
 function enlaceWhatsApp(n, areaTexto) {
   const texto = `¡Hola! Quiero información del lote ${n} de Balcones (${areaTexto}).`;
   return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(texto)}`;
@@ -60,7 +72,12 @@ export function construirFichaLote(json, n) {
     // una panorámica pesa lo que pesan todas las demás imágenes juntas, así que
     // no puede entrar al vuelo con la página.
     pano: lote.pano ?? null,
-    whatsapp: disponible ? enlaceWhatsApp(lote.n, areaTexto) : null
+    whatsapp: disponible ? enlaceWhatsApp(lote.n, areaTexto) : null,
+    // Un lote colocado tambien lleva alfiler: quien mira quiere saber donde
+    // quedo lo que se vendio. Lo que no lleva es el boton de pedirlo.
+    mapa: (typeof lote.lat === 'number' && typeof lote.lon === 'number')
+      ? enlaceMapa(lote.lat, lote.lon)
+      : null
   };
 }
 
@@ -160,6 +177,15 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     // basta: un botón `display:none` sigue siendo enfocable en algunos
     // navegadores viejos, y no queremos que nadie llegue a él con el tabulador
     // y escriba pidiendo un lote con dueño.
+    const alMapa = dialogo.querySelector('.ficha-mapa');
+    if (f.mapa) {
+      alMapa.href = f.mapa;
+      alMapa.hidden = false;
+    } else {
+      alMapa.removeAttribute('href');
+      alMapa.hidden = true;
+    }
+
     const boton = dialogo.querySelector('.ficha-whatsapp');
     if (f.whatsapp) {
       boton.href = f.whatsapp;

@@ -21,18 +21,18 @@
   <path class="lote" id="lote-12" data-lote="12" d="M1212.3 252.7L1306.3 378.8L1340.3 433.2L1363.0 481.3L1359.7 483.3L1356.3 484.9L1352.8 486.3L1349.2 487.4L1345.5 488.3L1341.8 488.8L1338.0 489.0L1334.2 488.9L1143.6 389.3L1139.2 387.1L1134.8 384.9L1130.3 382.9L1125.8 381.0L1121.3 379.3L1116.7 377.7L1112.0 376.2L1107.3 374.9L1102.6 373.6L1097.8 372.6L1093.0 371.6L1088.2 370.8L1083.4 370.1L1078.5 369.6L1073.6 369.2L1068.7 368.9Z"/>
   <path class="lote" id="lote-13" data-lote="13" d="M937.2 336.4L1154.4 162.1L1172.5 193.0L1212.3 252.7L1068.7 368.9L1062.6 368.3L1056.6 367.9L1050.5 367.8L1044.4 367.9L1038.4 368.1L1032.3 368.6L1026.3 369.4L1020.3 370.3L1014.4 371.5L1008.5 372.9L1002.7 374.5L996.9 376.3L991.2 378.3L985.5 380.5L979.9 383.0L974.4 385.6Z"/>
   <path class="lote" id="lote-14" data-lote="14" d="M1077.7 42.0L940.3 227.8L884.0 266.0L937.2 336.4L1154.4 162.1L1117.0 107.2Z"/>
-  <g class="rotulo-lote" data-lote="1" transform="translate(1585.3 1745.6)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="2" transform="translate(1584.0 1620.1)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="3" transform="translate(1581.3 1510.6)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="4" transform="translate(1563.5 1404.5)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="5" transform="translate(1491.3 1307.3)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="6" transform="translate(1519.3 1206.5)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="7" transform="translate(1496.9 1059.2)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="8" transform="translate(1486.4 933.1)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="9" transform="translate(1455.9 799.8)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="10" transform="translate(1395.5 694.4)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="11" transform="translate(1286.1 567.4)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="12" transform="translate(1200.6 408.4)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="13" transform="translate(1039.5 346.9)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
-  <g class="rotulo-lote" data-lote="14" transform="translate(1018.4 190.3)"><text class="numero" y="-2"></text><text class="area" y="12"></text></g>
+  <g class="rotulo-lote" data-lote="1" transform="translate(1585.3 1745.6)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="2" transform="translate(1584.0 1620.1)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="3" transform="translate(1581.3 1510.6)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="4" transform="translate(1563.5 1404.5)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="5" transform="translate(1491.3 1307.3)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="6" transform="translate(1519.3 1206.5)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="7" transform="translate(1496.9 1059.2)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="8" transform="translate(1486.4 933.1)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="9" transform="translate(1455.9 799.8)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="10" transform="translate(1395.5 694.4)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="11" transform="translate(1286.1 567.4)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="12" transform="translate(1200.6 408.4)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="13" transform="translate(1039.5 346.9)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
+  <g class="rotulo-lote" data-lote="14" transform="translate(1018.4 190.3)"><text class="numero" y="-8"></text><text class="area" y="18"></text><text class="marca" y="42"></text></g>
 </svg>

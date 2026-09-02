@@ -68,7 +68,10 @@ TOLERANCIA = 0.03
 # «DJI_0473.jpg» quedan fuera a proposito: de un nombre asi el numero se
 # adivina, y adivinar mal significa publicar la panoramica del vecino en la
 # ficha de un lote.
-NOMBRE_LOTE = re.compile(r'(?:lote[\s_-]*)?(\d{1,2})', re.IGNORECASE)
+# El sufijo «-1», «-2» es el numero de toma: «LOTE 6-1.JPG» es el lote 6, en
+# su segunda vuelta de vuelo. Se acepta y se ignora — a la web solo llega una
+# panoramica por lote, la ultima que se procese.
+NOMBRE_LOTE = re.compile(r'(?:lote[\s_-]*)?(\d{1,2})(?:-\d)?', re.IGNORECASE)
 
 
 def mide(ruta):

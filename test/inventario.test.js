@@ -146,3 +146,29 @@ test('disponibles, reservados y colocados se reparten los 14 lotes', () => {
   assert.equal(r.disponibles + r.reservados + r.colocados, inv.lotes.length);
   assert.equal(r.areaDisponible + r.areaReservada + r.areaColocada, r.areaTotal);
 });
+
+// ── Las coordenadas del lote ────────────────────────────────────────────────
+// Las escribe herramientas/preparar-aereo.py convirtiendo el CAD de EPSG:9377
+// a WGS84. La caja de validación es Santa Rosa de Osos y sus alrededores: una
+// coordenada fuera de ahí es un error de conversión, y un alfiler en el
+// departamento equivocado es peor que ningún alfiler.
+const conCoord = (lat, lon) => ({
+  ...inv,
+  lotes: [{ n: 1, sector: 1, area: 100, estado: 'disponible', lat, lon }]
+});
+
+test('acepta una coordenada dentro de Santa Rosa', () => {
+  assert.doesNotThrow(() => validarInventario(conCoord(6.6505, -75.4455)));
+});
+
+test('rechaza una coordenada fuera de la zona', () => {
+  for (const [lat, lon] of [[0, 0], [6.65, 75.44], [40.7, -74.0], [-6.65, -75.44]]) {
+    assert.throws(() => validarInventario(conCoord(lat, lon)), /coordenada/,
+      `debería rechazar ${lat}, ${lon}`);
+  }
+});
+
+test('rechaza media coordenada', () => {
+  const media = { ...inv, lotes: [{ n: 1, sector: 1, area: 100, estado: 'disponible', lat: 6.65 }] };
+  assert.throws(() => validarInventario(media), /coordenada/);
+});

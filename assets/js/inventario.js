@@ -16,6 +16,16 @@ export const ESTADOS = ['disponible', 'reservado', 'vendido', 'especie'];
 // puede escribir ahí.
 const RUTA_PANO = /^img\/pano\/[a-z0-9-]+\.jpg$/;
 
+// Caja de coordenadas alrededor de Santa Rosa de Osos. Las escribe
+// herramientas/preparar-aereo.py convirtiendo el CAD de EPSG:9377 a WGS84, y
+// una conversion mal hecha no da un numero raro: da un numero perfectamente
+// valido en otro pais. Sin esta caja, un alfiler en el oceano o en Nueva York
+// se publica sin que nada se queje.
+//
+// El margen es generoso a proposito -- no vale la pena apretarlo al predio y
+// tener que tocarlo cada vez que se compre un lote vecino.
+const CAJA = { latMin: 6.5, latMax: 6.8, lonMin: -75.6, lonMax: -75.3 };
+
 export function validarInventario(json) {
   if (!json || typeof json.precioM2 !== 'number' || json.precioM2 <= 0) {
     throw new Error('El inventario no trae un precio por metro cuadrado válido.');
@@ -38,6 +48,21 @@ export function validarInventario(json) {
     }
     if ('precio' in l) {
       throw new Error(`El lote ${l.n} trae un precio escrito. El precio se calcula.`);
+    }
+    const tieneLat = 'lat' in l, tieneLon = 'lon' in l;
+    if (tieneLat !== tieneLon) {
+      throw new Error(
+        `El lote ${l.n} trae media coordenada. Van las dos o ninguna.`
+      );
+    }
+    if (tieneLat && !(
+      typeof l.lat === 'number' && typeof l.lon === 'number' &&
+      l.lat >= CAJA.latMin && l.lat <= CAJA.latMax &&
+      l.lon >= CAJA.lonMin && l.lon <= CAJA.lonMax
+    )) {
+      throw new Error(
+        `El lote ${l.n} tiene una coordenada fuera de Santa Rosa: ${l.lat}, ${l.lon}`
+      );
     }
     if ('pano' in l && !(typeof l.pano === 'string' && RUTA_PANO.test(l.pano))) {
       throw new Error(

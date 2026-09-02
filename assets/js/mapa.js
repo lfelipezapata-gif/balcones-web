@@ -14,6 +14,18 @@ import { metros } from './formato.js';
 // que el titular y los precios, así que no hay dos versiones que puedan
 // separarse.
 
+// Lo que se escribe ENCIMA del lote en el plano. Solo el vendido lleva
+// palabra: sobre la ortofoto un verde translucido y un gris translucido sobre
+// pasto se parecen mas de lo que uno cree, y la palabra cierra la duda.
+//
+// El de pago en especie NO la lleva aunque se pinte igual de gris. No se
+// vendio: se entrego como pago, y por el no entro un peso. Decirle «vendido»
+// en la pagina publica seria de los pocos textos que un socio puede leer y
+// saber que no es cierto.
+const MARCA = {
+  vendido: 'VENDIDO'
+};
+
 // Cómo se lee cada estado en el plano. «especie» es un lote entregado como
 // pago en especie: no está en venta, así que se ve igual que uno vendido —
 // pero se conserva el estado propio para que el rótulo accesible diga la
@@ -61,6 +73,7 @@ export function construirVistaMapa(json) {
       estado: l.estado,
       numeroTexto: String(l.n),
       areaTexto: metros(l.area),
+      marcaTexto: MARCA[l.estado] ?? '',
       // Lo que lee un lector de pantalla y lo que sale al pasar el mouse.
       descripcion: `Lote ${l.n} · ${metros(l.area)} · ${LEIDO[l.estado]}`
     }))
@@ -114,6 +127,9 @@ export function pintarMapa(svg, json) {
     rotulo.setAttribute('data-estado', l.estado);
     rotulo.querySelector('.numero').textContent = l.numeroTexto;
     rotulo.querySelector('.area').textContent = l.areaTexto;
+    // Solo el plano aereo trae este elemento; el esquematico no lo necesita.
+    const marca = rotulo.querySelector('.marca');
+    if (marca) marca.textContent = l.marcaTexto;
   }
 
   return vista;

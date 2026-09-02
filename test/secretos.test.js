@@ -82,7 +82,24 @@ const CELULAR_COMERCIAL_PERMITIDO = new Set(['3203769226', '573203769226']);
 // una fuga de verdad. Nadie escribe un teléfono personal dentro de una
 // librería minificada que se baja de un CDN; el riesgo que justificaba
 // escanearlo todo era `docs/`, no este.
-const paraDatosPersonales = archivos.filter(f => !f.startsWith('vendor/'));
+// Fuera del escaneo de cedulas y celulares, y solo de ese:
+//
+//   vendor/  -- librerias de terceros minificadas. Pannellum trae los
+//               decimales de pi («…3589793238») y eso pasa por celular.
+//   binarios -- una foto no es texto. Leer un JPEG como utf-8 produce ruido
+//               con rachas de digitos: img/pano/lote-08.jpg trae «3333333333»
+//               en sus pixeles.
+//
+// ⚠️ OJO CON LO SEGUNDO. Una imagen SI puede llevar una fuga -- ya paso: un
+// telefono personal quemado dentro de una imagen del proyecto. Lo que esta
+// prueba nunca pudo hacer es detectarlo, porque el numero esta DIBUJADO, no
+// escrito en los bytes. Excluir los binarios no baja la vigilancia: quita un
+// falso positivo que daba una seguridad que no existia. Un numero dentro de
+// una imagen hay que verlo con los ojos.
+const BINARIO = /\.(jpe?g|png|gif|webp|ico|pdf|zip|woff2?|ttf|mp4|mov)$/i;
+const paraDatosPersonales = archivos.filter(
+  f => !f.startsWith('vendor/') && !BINARIO.test(f)
+);
 
 test('ningún archivo versionado trae cédulas ni celulares personales', () => {
   for (const f of paraDatosPersonales) {
