@@ -45,3 +45,43 @@ test('ni los colocados ni el reservado aparecen entre los disponibles', () => {
   const ns = construirVistaVitrina(inv).tarjetas.map(t => t.n);
   assert.deepEqual(ns, [6, 7, 8, 9, 11, 13]);
 });
+
+// ── La pista: decirle a la gente qué hacer con el plano ─────────────────────
+// Sin esto el plano es un dibujo bonito y nadie lo toca. La frase sale del
+// dato y no escrita a mano, porque lo que promete —la vista en 360°— depende
+// de que las panorámicas existan de verdad.
+
+// Se quitan primero las panorámicas que el inventario real ya trae y después
+// se ponen solo las que pide la prueba. Sin ese borrado, pedir «solo dos» deja
+// las seis de verdad y la prueba mide otra cosa.
+const conPanos = (ns) => ({
+  ...inv,
+  lotes: inv.lotes.map(({ pano, ...l }) =>
+    ns.includes(l.n) ? { ...l, pano: `img/pano/lote-${String(l.n).padStart(2, '0')}.jpg` } : l)
+});
+
+test('si todos los disponibles tienen 360, la pista lo promete sin condiciones', () => {
+  const v = construirVistaVitrina(conPanos([6, 7, 8, 9, 11, 13]));
+  assert.match(v.pista, /360/);
+  assert.doesNotMatch(v.pista, /\d+ de \d+/, 'no hay por qué matizar si están todas');
+});
+
+test('si solo algunos tienen 360, la pista dice cuántos', () => {
+  const v = construirVistaVitrina(conPanos([6, 7]));
+  assert.match(v.pista, /360/);
+  assert.match(v.pista, /2 de 6/);
+});
+
+// El día que se venda todo lo que tiene panorámica, prometer una vista que no
+// existe es peor que no prometer nada.
+test('sin ninguna panorámica la pista no promete 360', () => {
+  const v = construirVistaVitrina(conPanos([]));
+  assert.doesNotMatch(v.pista, /360/);
+  assert.match(v.pista, /precio/);
+});
+
+test('cada tarjeta sabe si su lote tiene vista en 360', () => {
+  const v = construirVistaVitrina(conPanos([6, 7]));
+  assert.equal(v.tarjetas.find(t => t.n === 6).tiene360, true);
+  assert.equal(v.tarjetas.find(t => t.n === 9).tiene360, false);
+});

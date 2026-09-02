@@ -102,7 +102,22 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
    Nada de esta sección puede colgar de `.tablero` ni al revés: este archivo lo
    comparten la vitrina y el tablero de socios, y ahí abajo hay otra ficha de
    lote que es de aquel y no de este. */
-.pista { font-size: .9rem; color: #6b6b6b; margin: 1rem 0 0; }
+/* La pista va ARRIBA del plano, no debajo de las tarjetas, y no en gris de
+   letra chica: es la instruccion que decide si alguien toca el plano o lo mira
+   y sigue de largo. El texto lo pone assets/js/vitrina.js desde el dato. */
+.pista {
+  font-size: 1rem; color: var(--tinta);
+  background: #eef3ec; border-left: 3px solid var(--verde); border-radius: 0;
+  padding: .75rem 1rem; margin: 1.25rem 0 1rem;
+}
+
+/* En la tarjeta, el aviso de que ese lote trae vista en 360. Sale solo si el
+   lote la tiene de verdad: lo decide `tiene360`, que mira el dato. */
+.marca360 {
+  margin: .5rem 0 0; font-size: .85rem; font-weight: 600;
+  color: var(--verde);
+}
+.marca360::before { content: '▸ '; }
 
 /* El plano y las tarjetas se vuelven pulsables. El cursor y el realce son la
    única señal de que hay algo detrás: sin esto el plano se ve idéntico a

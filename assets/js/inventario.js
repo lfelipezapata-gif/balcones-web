@@ -88,6 +88,7 @@ export function lotesDisponibles(json) {
       n: l.n,
       sector: l.sector,
       area: l.area,
-      precio: precioDeLote(l, json.precioM2)
+      precio: precioDeLote(l, json.precioM2),
+      pano: l.pano ?? null
     }));
 }

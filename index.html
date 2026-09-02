@@ -24,6 +24,7 @@
 <section id="disponibles">
   <h2 id="titular"></h2>
   <p id="subtitulo"></p>
+  <p id="pista" class="pista"></p>
   <div id="mapa" class="mapa-caja"></div>
   <p class="leyenda">
     <span><span class="muestra" data-estado="disponible"></span>Disponible</span>
@@ -31,7 +32,6 @@
     <span id="leyenda-reservado" hidden><span class="muestra" data-estado="reservado"></span>Reservado</span>
   </p>
   <div id="tarjetas" class="tarjetas"></div>
-  <p class="pista">Tocá un lote en el plano o una tarjeta para ver su ficha.</p>
 </section>
 
 <dialog id="ficha" class="ficha" aria-labelledby="ficha-titulo">
@@ -102,6 +102,7 @@
 
   document.getElementById('titular').textContent = v.titular;
   document.getElementById('subtitulo').textContent = v.subtitulo;
+  document.getElementById('pista').textContent = v.pista;
 
   // El botón va dentro del <h3> para no perder el encabezado, que es como
   // navega la lista quien usa lector de pantalla. Lo que lo vuelve un blanco
@@ -113,6 +114,7 @@
       <h3><button class="abrir" type="button" data-lote="${t.n}">Lote ${t.n}</button></h3>
       <p class="area">${t.areaTexto}</p>
       <p class="precio">${t.precioTexto}</p>
+      ${t.tiene360 ? '<p class="marca360">Ver la vista en 360°</p>' : ''}
     </article>`).join('');
 
   montarFicha(inv, {
