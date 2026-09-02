@@ -30,6 +30,7 @@
     <span><span class="muestra" data-estado="disponible"></span>Disponible</span>
     <span><span class="muestra" data-estado="vendido"></span>Vendido</span>
     <span id="leyenda-reservado" hidden><span class="muestra" data-estado="reservado"></span>Reservado</span>
+    <span><span class="muestra" data-estado="resto"></span>Próximas etapas</span>
   </p>
   <div id="tarjetas" class="tarjetas"></div>
 </section>
@@ -102,7 +103,7 @@
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = document.getElementById('mapa');
-  caja.innerHTML = await (await fetch('img/mapa.svg')).text();
+  caja.innerHTML = await (await fetch('img/mapa-aereo.svg')).text();
   const vistaMapa = pintarMapa(caja.querySelector('svg'), inv);
 
   // La casilla de «Reservado» de la leyenda sale del dato, no de una decisión

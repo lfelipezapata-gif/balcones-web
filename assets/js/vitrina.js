@@ -33,7 +33,13 @@ export function construirVistaVitrina(json) {
 
   return {
     titular,
-    subtitulo: `${metros(r.areaDisponible)} disponibles · ${pesos(json.precioM2)} el m²`,
+    // «de apertura de la primera etapa» dice por que ese es el precio y deja
+    // dicho que hay mas etapas, sin prometer una fecha ni un porcentaje de
+    // aumento. Es lo unico que se puede sostener: que suba y cuanto no esta
+    // decidido, y una promesa que no se cumple se paga con el comprador que
+    // la escucho.
+    subtitulo: `${metros(r.areaDisponible)} disponibles · ${pesos(json.precioM2)} el m² ` +
+               `— precio de apertura de la primera etapa`,
     pista: construirPista(disponibles),
     tarjetas: disponibles.map(l => ({
       n: l.n,

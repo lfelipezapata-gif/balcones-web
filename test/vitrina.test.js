@@ -30,6 +30,7 @@ test('con un solo lote el titular va en singular', () => {
 test('el subtítulo trae área y valor de lo disponible', () => {
   const v = construirVistaVitrina(inv);
   assert.match(v.subtitulo, /13\.908 m²/);
+  assert.match(v.subtitulo, /precio de apertura de la primera etapa/);
   assert.match(v.subtitulo, /\$110\.000/);
 });
 

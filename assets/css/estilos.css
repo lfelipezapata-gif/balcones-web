@@ -81,12 +81,44 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .mapa .rotulo-lote[data-estado="reservado"] .numero { fill: #3d3005; }
 .mapa .rotulo-lote[data-estado="reservado"] .area { fill: #5c4a0c; }
 
+/* ── El plano aereo ───────────────────────────────────────────────────────
+   img/mapa-aereo.svg es la ortofoto del levantamiento con los lotes VIGENTES
+   encima. Comparte las clases con img/mapa.svg (.lote, .rotulo-lote) para que
+   assets/js/mapa.js lo pinte sin cambiar nada, pero sobre una foto los colores
+   tienen que dejar ver el terreno: aca van translucidos.
+
+   Una unidad del viewBox es un PUNTO del plano original, no un metro: 1 pt =
+   0,3175 m. Por eso los tamanos de letra son ~3 veces los del plano
+   esquematico para el mismo tamano aparente. */
+.aereo .lote { fill: rgba(90, 96, 88, .45); stroke: #fff; stroke-width: 2.2; }
+.aereo .lote[data-estado="disponible"] { fill: rgba(47, 107, 63, .52); }
+.aereo .lote[data-estado="disponible"] { stroke-dasharray: 13 9; stroke-width: 4; }
+.aereo .lote[data-estado="reservado"] { fill: rgba(200, 161, 62, .60); }
+.aereo .lote:hover { stroke: var(--dorado); stroke-width: 5; }
+.aereo .lote:focus-visible { stroke: var(--dorado); stroke-width: 7; outline: none; }
+
+/* Lo que todavia no esta loteado. NO es un lindero: es el perimetro real de la
+   finca menos los 14 lotes, o sea exactamente la tierra de la que aun no hay
+   subdivision dibujada. No se inventa ninguna division futura. */
+.aereo .resto { fill: rgba(2, 24, 12, .34); }
+.aereo .perimetro { fill: none; stroke: #fff; stroke-width: 3; stroke-dasharray: 18 12; }
+.aereo .rotulo-resto {
+  fill: #fff; font-size: 46px; font-weight: 600; text-anchor: middle;
+  letter-spacing: .06em;
+}
+.aereo .rotulo-lote .numero { font-size: 40px; fill: #fff; }
+.aereo .rotulo-lote .area { font-size: 23px; fill: rgba(255,255,255,.88); }
+.aereo .rotulo-lote[data-estado="reservado"] .numero,
+.aereo .rotulo-lote[data-estado="reservado"] .area { fill: #2a2103; }
+
 /* El plano es alto y flaco porque el predio lo es: 420 m de largo por 150 de
    ancho. A todo el ancho de una pantalla de escritorio no cabe a lo alto, así
    que ahí se limita y se centra. En el teléfono va a todo el ancho, que es
    donde cada píxel cuenta para leer las áreas. */
 @media (min-width: 700px) {
   .mapa { max-width: 600px; margin: 0 auto; }
+  /* La ortofoto aguanta mas ancho: es una foto, no un diagrama de lineas. */
+  .mapa.aereo { max-width: 700px; }
 }
 
 .leyenda {
@@ -100,6 +132,7 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 }
 .leyenda .muestra[data-estado="disponible"] { background: var(--verde); border-color: var(--verde); }
 .leyenda .muestra[data-estado="reservado"] { background: var(--dorado); border-color: var(--dorado); }
+.leyenda .muestra[data-estado="resto"] { background: #4a5a4e; border-color: #4a5a4e; }
 /* La casilla de «Reservado» solo se muestra si hay alguno; la esconde
    assets/js/mapa.js con el dato, no una decisión escrita a mano acá. */
 .leyenda [hidden] { display: none; }
