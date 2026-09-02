@@ -56,6 +56,15 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
    del lado seguro: si algo falla, ningún lote se anuncia como libre. */
 .mapa .lote { fill: #ced2cb; stroke: #fff; stroke-width: .7; }
 .mapa .lote[data-estado="disponible"] { fill: var(--verde); }
+/* Borde punteado SOLO en los disponibles. En escritorio el lote se ilumina al
+   pasar el mouse; en un telefono no existe «pasar el mouse» y el plano se veia
+   igual de inerte que cuando era un dibujo. El punteado es la unica senal de
+   que eso se toca. Va en blanco sobre el verde, que es donde tiene contraste,
+   y las medidas estan en METROS porque una unidad del viewBox es un metro:
+   trazos de 4 m con huecos de 3 m sobre lotes de unos 50 m de lado. */
+.mapa .lote[data-estado="disponible"] {
+  stroke: #fff; stroke-width: 1.4; stroke-dasharray: 4 3;
+}
 /* Reservado va en dorado: ni verde de libre ni gris de colocado, porque no es
    ninguna de las dos. El dorado ya es de la marca y no hay que inventar un
    color nuevo para el plano. */
