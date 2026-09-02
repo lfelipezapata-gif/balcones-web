@@ -1,0 +1,38 @@
+PANORAMICAS 360 DE LOS LOTES
+============================
+
+Aca van las esfericas del dron, una por lote, con este nombre exacto:
+
+    lote-06.jpg   lote-07.jpg   lote-11.jpg   ...
+
+Dos digitos siempre. El nombre lo pone solo el script; no hay que escribirlo
+a mano.
+
+
+NO LAS METAS AQUI A MANO
+------------------------
+La esferica que sale del DJI pesa entre 6 y 10 MB. Puesta asi como viene, la
+pagina de un lote tarda en un celular con datos mas de lo que nadie espera, y
+la persona cierra antes de ver el precio.
+
+Se procesan con:
+
+    python3 herramientas/preparar-panoramicas.py CARPETA --escribir
+
+Eso las baja a 4096x2048 y calidad 80 (~1 MB), las nombra y le agrega el campo
+«pano» a data/lotes.json. En pantalla la diferencia no se ve.
+
+Las instrucciones completas —incluido como sacar la panoramica cosida de la
+app DJI Fly, que es el paso donde se pierde el trabajo de una manana— estan
+arriba de todo en ese mismo script.
+
+
+UNA COSA MAS
+------------
+El visor corta la mirada hacia arriba a 50 grados, a proposito: el gimbal del
+dron no alcanza a fotografiar el cielo justo encima y toda esferica trae un
+hueco ahi. El corte vive en MAX_PITCH, en assets/js/ficha.js.
+
+Con la primera panoramica real hay que mirar hasta donde llega ese hueco en el
+Mini 5 Pro y ajustar el numero. Si queda muy bajo se pierde cielo bueno; si
+queda muy alto se ve el tapon.

@@ -1,0 +1,11 @@
+Pannellum 2.5.6 — visor de panoramicas 360
+https://github.com/mpetroff/pannellum
+Licencia MIT, (c) 2011-2020 Matthew Petroff
+
+Va servido desde el repositorio y no desde un CDN a proposito: la pagina de
+venta no depende de que un tercero siga en linea, y funciona igual en el
+portatil de una reunion sin internet.
+
+No lo edites. Si hay que actualizarlo, se bajan de nuevo los dos archivos
+—pannellum.js y pannellum.css— de la version nueva y se corre npm test: hay
+una prueba que vigila que sigan estando y que no engorden.

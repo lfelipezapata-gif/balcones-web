@@ -63,10 +63,67 @@ export function construirFichaLote(json, n) {
   };
 }
 
+// El visor 360.
+//
+// El corte de arriba (`maxPitch`) es lo importante. El gimbal del dron no
+// alcanza a apuntar derecho al cielo, así que toda esférica sale con un hueco
+// en el cenit —un tapón gris o negro— que el visor mostraría feliz si se lo
+// permite. Cortando la mirada antes de llegar ahí, el hueco no existe para el
+// que mira. Hacia abajo no se corta: el dron sí fotografía el suelo, y el
+// suelo es el lote que se está vendiendo.
+//
+// 50° es el punto de partida. Con la primera panorámica real hay que subirlo
+// o bajarlo mirando hasta dónde llega el hueco de este dron en particular:
+// el gimbal del Mini 5 Pro gira 225° y el hueco puede ser más chico que el de
+// los modelos viejos.
+const MAX_PITCH = 50;
+
+export function configPano(ficha) {
+  if (!ficha.pano) return null;
+  return {
+    type: 'equirectangular',
+    panorama: ficha.pano,
+    autoLoad: true,
+    // Gira solo, muy despacio, hasta que alguien la toca. Sin esto se ve como
+    // una foto quieta y rara: nadie adivina que se puede arrastrar.
+    autoRotate: -2,
+    autoRotateInactivityDelay: 3000,
+    maxPitch: MAX_PITCH,
+    minPitch: -90,
+    hfov: 100,
+    minHfov: 50,
+    maxHfov: 120,
+    showFullscreenCtrl: false,
+    keyboardZoom: false
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // De acá para abajo se toca el documento. La parte de arriba es la que se
 // prueba: `construirFichaLote` no sabe que existe un navegador.
 // ─────────────────────────────────────────────────────────────────────────
+
+// Pannellum entra la primera vez que se abre un lote con panorámica, no en la
+// carga de la página. Son 66 KB entre las dos piezas y la gran mayoría de las
+// visitas no van a abrir un 360.
+let pannellum = null;
+
+function cargarPannellum() {
+  if (pannellum) return pannellum;
+  pannellum = new Promise((listo, falla) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'vendor/pannellum.css';
+    document.head.appendChild(css);
+
+    const js = document.createElement('script');
+    js.src = 'vendor/pannellum.js';
+    js.onload = listo;
+    js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
+    document.head.appendChild(js);
+  });
+  return pannellum;
+}
 
 // Los polígonos del plano son el blanco natural en un computador y el peor
 // posible en un teléfono: el lote 7 son 2.129 m² que en una pantalla de 390 px
@@ -104,13 +161,50 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
       boton.hidden = true;
     }
 
-    // Acá entra la panorámica 360 el día que haya fotos: `f.pano` trae la ruta
-    // o `null`. Todavía no se monta ningún visor —una equirectangular pesa
-    // más que todo el resto del sitio junto y no se carga sin que la pidan—
-    // pero el dato ya viaja validado desde data/lotes.json.
-
     dialogo.showModal();
+    montarPano(f);
   }
+
+  // Un visor de Pannellum se queda con un contexto de WebGL. El navegador
+  // permite unos pocos a la vez, así que abrir siete lotes seguidos sin
+  // destruir el anterior deja la última panorámica en negro y sin ningún
+  // error a la vista. Por eso se destruye siempre antes de crear.
+  let visor = null;
+  const caja = dialogo.querySelector('.ficha-pano');
+
+  // Cada apertura lleva un número. La librería se carga esperando, y en ese
+  // rato el visitante puede haber cerrado o saltado a otro lote: si al volver
+  // el número ya no es el suyo, esta llamada llegó tarde y no monta nada.
+  let turno = 0;
+
+  function soltarPano() {
+    if (!visor) return;
+    visor.destroy();
+    visor = null;
+    caja.innerHTML = '';
+  }
+
+  async function montarPano(f) {
+    const mio = ++turno;
+    soltarPano();
+    const config = configPano(f);
+    caja.hidden = !config;
+    if (!config) return;
+
+    try {
+      await cargarPannellum();
+    } catch {
+      // Sin visor la ficha sigue sirviendo: área, precio y el botón de
+      // WhatsApp son lo que cierra la venta. Una panorámica que no cargó no
+      // puede llevarse el resto de la ficha por delante.
+      caja.hidden = true;
+      return;
+    }
+    if (mio !== turno || !dialogo.open) return;
+    visor = window.pannellum.viewer(caja, config);
+  }
+
+  dialogo.addEventListener('close', soltarPano);
 
   for (const poligono of svg.querySelectorAll('.lote[data-lote]')) {
     poligono.setAttribute('role', 'button');

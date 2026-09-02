@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { construirFichaLote, WHATSAPP } from '../assets/js/ficha.js';
+import { construirFichaLote, configPano, WHATSAPP } from '../assets/js/ficha.js';
 import { ESTADOS } from '../assets/js/inventario.js';
+import { existsSync, statSync } from 'node:fs';
 
 const inv = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url)));
 
@@ -73,15 +74,54 @@ test('pedir un lote que no existe falla con el número adentro', () => {
   assert.throws(() => construirFichaLote(inv, 99), /99/);
 });
 
+// Estos dos inventarios se arman a mano en vez de retocar data/lotes.json. Si
+// se apoyaran en el archivo real, el día que entre la panorámica del lote 7 la
+// prueba «sin panorámica» empezaría a fallar sola, sin que nada esté mal.
+const sinPano = { ...inv, lotes: [{ n: 7, sector: 1, area: 2129, estado: 'disponible' }] };
+const conPano = { ...sinPano, lotes: [{ ...sinPano.lotes[0], pano: 'img/pano/lote-07.jpg' }] };
+
 // El hueco del 360: mientras no haya foto, la ficha no debe inventar nada.
 test('sin panorámica la ficha viene con pano en null', () => {
-  assert.equal(construirFichaLote(inv, 7).pano, null);
+  assert.equal(construirFichaLote(sinPano, 7).pano, null);
 });
 
 test('con panorámica la ficha la pasa tal cual', () => {
-  const con = {
-    ...inv,
-    lotes: inv.lotes.map(l => l.n === 7 ? { ...l, pano: 'img/pano/lote-07.jpg' } : l)
-  };
-  assert.equal(construirFichaLote(con, 7).pano, 'img/pano/lote-07.jpg');
+  assert.equal(construirFichaLote(conPano, 7).pano, 'img/pano/lote-07.jpg');
+});
+
+// ── El visor 360 ────────────────────────────────────────────────────────────
+
+test('el visor recibe la panorámica como equirectangular', () => {
+  const c = configPano(construirFichaLote(conPano, 7));
+  assert.equal(c.type, 'equirectangular');
+  assert.equal(c.panorama, 'img/pano/lote-07.jpg');
+});
+
+// Esta es la que no se puede perder. El gimbal del dron no alcanza a mirar
+// derecho hacia arriba, así que TODA esférica de dron trae un hueco en el
+// cenit. Si el visor deja subir la mirada hasta el tope, el comprador ve un
+// tapón gris donde debería estar el cielo y piensa que la foto está mala.
+// Mirar hacia abajo sí está permitido: el dron sí fotografía el nadir, y el
+// suelo es justamente el lote que está vendiendo.
+test('el visor no deja llegar al hueco del cenit', () => {
+  const c = configPano(construirFichaLote(conPano, 7));
+  assert.ok(c.maxPitch < 90, 'maxPitch tiene que cortar antes del cenit');
+  assert.ok(c.maxPitch > 0, 'maxPitch por debajo del horizonte dejaría ver solo el piso');
+  assert.equal(c.minPitch, -90);
+});
+
+test('sin panorámica no hay configuración de visor', () => {
+  assert.equal(configPano(construirFichaLote(sinPano, 7)), null);
+});
+
+// Pannellum va servido desde el repositorio, no desde un CDN: la página de
+// venta no depende de que un tercero siga en línea, y funciona igual en el
+// portátil de una reunión sin internet.
+test('Pannellum está en vendor y pesa lo que debe pesar una librería', () => {
+  for (const [f, kb] of Object.entries({ 'pannellum.js': 120, 'pannellum.css': 30 })) {
+    const ruta = new URL(`../vendor/${f}`, import.meta.url);
+    assert.ok(existsSync(ruta), `falta vendor/${f}`);
+    const real = Math.round(statSync(ruta).size / 1024);
+    assert.ok(real <= kb, `vendor/${f} pesa ${real} KB y el tope son ${kb} KB`);
+  }
 });

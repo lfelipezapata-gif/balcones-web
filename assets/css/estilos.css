@@ -137,6 +137,23 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   color: #5b635d; background: #eceee9; border-radius: 999px; padding: .2rem .7rem;
 }
 .ficha-estado[data-estado="disponible"] { color: #fff; background: var(--verde); }
+/* El visor 360. La altura es fija porque Pannellum mide su contenedor al
+   arrancar: con altura automática mide cero, se dibuja de 0 px y no hay ningún
+   error que lo diga. El 16:9 es para que en un teléfono no se coma la pantalla
+   entera y el precio quede debajo del pliegue. */
+.ficha-pano {
+  margin: 1.25rem 0 0;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #eceee9;
+}
+.ficha-pano[hidden] { display: none; }
+/* Pannellum le pone la clase `pnlm-container` AL MISMO div, no a uno adentro.
+   Con un selector de descendiente («.ficha-pano .pnlm-container») la regla no
+   engancha nunca y manda el borde gris que trae la librería. */
+.ficha-pano.pnlm-container { border: 0; background: #eceee9; }
+
 .ficha-datos { margin: 1.25rem 0 0; }
 .ficha-datos > div {
   display: flex; justify-content: space-between; gap: 1rem;
