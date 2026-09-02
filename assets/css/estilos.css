@@ -217,12 +217,23 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   color: var(--tinta); background: #fff;
 }
 .ficha-cuerpo { overflow: auto; padding: 1.5rem; }
+/* ⚠️ ESTA REGLA NO SE PUEDE BORRAR.
+   El navegador esconde un <dialog> cerrado con su propia regla
+   `dialog:not([open]) { display: none }`. En cuanto acá arriba se le puso
+   `display: flex` para hacerlo columna, esa regla quedo pisada y la ficha
+   CERRADA se dibujaba dentro de la pagina: una tarjeta vacia con «Area /
+   Precio / Valor / Ubicacion» sin valores y una X, en mitad del listado.
+   Aparecia justo al cerrar el visor 360, que es cuando se noto. */
+.ficha:not([open]) { display: none; }
+
 .ficha::backdrop { background: rgba(2, 24, 12, .55); }
 .ficha-cerrar-caja { float: right; margin: -.5rem -.5rem 0 0; }
+/* 44x44 es el minimo para un dedo. Medido antes: 29x34, que en un telefono
+   se falla y se termina tocando el fondo. */
 .ficha-cerrar {
   font: inherit; font-size: 1.1rem; line-height: 1;
   background: none; border: 0; color: #6b6b6b; cursor: pointer;
-  padding: .5rem; border-radius: 6px;
+  width: 44px; height: 44px; padding: 0; border-radius: 8px;
 }
 .ficha-cerrar:hover { color: var(--tinta); background: #f1efe8; }
 .ficha-titulo { margin: 0; color: var(--verde); font-size: 1.5rem; }

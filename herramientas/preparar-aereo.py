@@ -422,6 +422,13 @@ def main():
 
     per_l = [local(p) for p in per]
     lotes_l = {n: [local(proyectar(*p)) for p in pts] for n, pts in lotes.items()}
+    # Donde va el rotulo de cada lote. NO el centroide: los lotes 1 a 5 y el 10
+    # son franjas angostas y el 12 es un triangulo con cola, y ahi el centroide
+    # cae sobre el borde o se sale. Se vio en el telefono: el «5» partido entre
+    # dos lotes y el «1» colgando por fuera. `punto_interior` es el punto mas
+    # adentro del poligono, que es el mismo criterio que ya se usa para el
+    # alfiler de Google Maps.
+    anclas = {n: local(proyectar(*punto_interior(pts))) for n, pts in lotes.items()}
 
     # «Lo que viene» = el perimetro MENOS los lotes actuales. No se dibuja
     # ningun lindero futuro: solo se sombrea la tierra que todavia no esta
@@ -455,9 +462,7 @@ def main():
         partes.append(f'  <path class="lote" id="lote-{n}" data-lote="{n}" '
                       f'd="{d_de(lotes_l[n])}"/>')
     for n in sorted(lotes_l):
-        v = lotes_l[n]
-        cx = sum(q[0] for q in v) / len(v)
-        cy = sum(q[1] for q in v) / len(v)
+        cx, cy = anclas[n]
         partes.append(f'  <g class="rotulo-lote" data-lote="{n}" '
                       f'transform="translate({cx:.1f} {cy:.1f})">'
                       f'<text class="numero" y="-8"></text>'

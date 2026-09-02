@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Condominio Balcones — Santa Rosa de Osos</title>
 <meta name="description" content="Lotes de casa-finca en Santa Rosa de Osos. Escritura individual, agua potable del acueducto urbano, energía y vías.">
-<link rel="stylesheet" href="assets/css/estilos.css?v=1a8a0b7e">
+<link rel="stylesheet" href="assets/css/estilos.css?v=f7cc8c35">
 <link rel="icon" href="img/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
@@ -98,18 +98,18 @@
 </footer>
 
 <script type="module">
-  import { construirVistaVitrina } from './assets/js/vitrina.js?v=1a8a0b7e';
-  import { pintarMapa } from './assets/js/mapa.js?v=1a8a0b7e';
-  import { montarFicha } from './assets/js/ficha.js?v=1a8a0b7e';
+  import { construirVistaVitrina } from './assets/js/vitrina.js?v=f7cc8c35';
+  import { pintarMapa } from './assets/js/mapa.js?v=f7cc8c35';
+  import { montarFicha } from './assets/js/ficha.js?v=f7cc8c35';
 
-  const inv = await (await fetch('data/lotes.json?v=1a8a0b7e')).json();
+  const inv = await (await fetch('data/lotes.json?v=f7cc8c35')).json();
   const v = construirVistaVitrina(inv);
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = document.getElementById('mapa');
-  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=1a8a0b7e')).text();
+  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=f7cc8c35')).text();
   const vistaMapa = pintarMapa(caja.querySelector('svg'), inv);
 
   // La casilla de «Reservado» de la leyenda sale del dato, no de una decisión

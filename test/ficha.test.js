@@ -200,3 +200,18 @@ test('un lote vendido también trae su enlace al mapa', () => {
   assert.equal(f.whatsapp, null);
   assert.ok(f.mapa);
 });
+
+// ⚠️ La regla que esconde la ficha cerrada.
+//
+// El navegador esconde un <dialog> cerrado con `dialog:not([open]) { display:
+// none }`. En cuanto `.ficha` gano `display: flex` para ser columna, esa regla
+// quedo pisada y la ficha CERRADA se dibujaba dentro de la pagina: una tarjeta
+// vacia con «Area / Precio / Valor / Ubicacion» sin valores y una X, en mitad
+// del listado de lotes. Se vio en el telefono, al cerrar el visor 360.
+//
+// Cualquiera que vuelva a tocar el `display` de `.ficha` reabre el mismo hueco.
+test('la ficha cerrada no se dibuja dentro de la página', () => {
+  const css = readFileSync(new URL('../assets/css/estilos.css', import.meta.url), 'utf8');
+  assert.match(css, /\.ficha:not\(\[open\]\)\s*\{[^}]*display:\s*none/,
+    'falta .ficha:not([open]) { display: none } y la ficha cerrada se va a ver');
+});
