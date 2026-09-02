@@ -1,4 +1,8 @@
-export const ESTADOS = ['disponible', 'vendido', 'especie'];
+// «reservado» es un lote que el dueño retira de la venta por un tiempo. No se
+// vendió y no entró plata por él: sigue siendo inventario, y en el tablero de
+// socios tiene que seguir contando entre los que faltan por vender. Lo único
+// que cambia es que hoy no se puede pedir desde la página.
+export const ESTADOS = ['disponible', 'reservado', 'vendido', 'especie'];
 
 // Ruta de la panorámica 360 de un lote. Es opcional —el sitio se publica con
 // unas pocas y las demás entran después— pero cuando viene tiene que ser un
@@ -52,7 +56,13 @@ export function resumenInventario(json) {
   validarInventario(json);
   const suma = (ls) => ls.reduce((t, l) => t + l.area, 0);
   const disponibles = json.lotes.filter(l => l.estado === 'disponible');
-  const colocados = json.lotes.filter(l => l.estado !== 'disponible');
+  const reservados = json.lotes.filter(l => l.estado === 'reservado');
+  // «Colocado» es el lote por el que ya hubo contraprestación: vendido, o
+  // entregado como pago en especie. Antes esto era «todo lo que no está
+  // disponible», que con la llegada de «reservado» habría contado como
+  // colocado un lote que sigue siendo del proyecto y por el que no entró un
+  // peso — y lo habría pintado de gris en el plano.
+  const colocados = json.lotes.filter(l => l.estado === 'vendido' || l.estado === 'especie');
   const vendidos = json.lotes.filter(l => l.estado === 'vendido');
   const areaDisponible = suma(disponibles);
   return {
@@ -60,6 +70,8 @@ export function resumenInventario(json) {
     disponibles: disponibles.length,
     areaDisponible,
     valorDisponible: areaDisponible * json.precioM2,
+    reservados: reservados.length,
+    areaReservada: suma(reservados),
     colocados: colocados.length,
     areaColocada: suma(colocados),
     vendidos: vendidos.length,

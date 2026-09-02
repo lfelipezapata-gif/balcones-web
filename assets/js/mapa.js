@@ -20,6 +20,7 @@ import { metros } from './formato.js';
 // verdad y no lo llame «vendido».
 const LEIDO = {
   disponible: 'disponible',
+  reservado: 'reservado',
   vendido: 'vendido',
   especie: 'pago en especie'
 };
@@ -47,7 +48,13 @@ export function construirVistaMapa(json) {
     titulo:
       `Plano del loteo. ${r.disponibles} ` +
       `${r.disponibles === 1 ? 'lote disponible' : 'lotes disponibles'} en verde, ` +
-      `${r.colocados} ${r.colocados === 1 ? 'colocado' : 'colocados'} en gris.`,
+      `${r.colocados} ${r.colocados === 1 ? 'colocado' : 'colocados'} en gris` +
+      // La frase de los reservados solo aparece si hay alguno. Un plano sin
+      // reservados no tiene por qué nombrar un estado que no está en pantalla.
+      (r.reservados
+        ? `, ${r.reservados} ${r.reservados === 1 ? 'reservado' : 'reservados'} en dorado.`
+        : '.'),
+    reservados: r.reservados,
     sectores,
     lotes: [...json.lotes].sort((a, b) => a.n - b.n).map(l => ({
       n: l.n,

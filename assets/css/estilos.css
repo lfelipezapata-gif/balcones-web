@@ -56,6 +56,10 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
    del lado seguro: si algo falla, ningún lote se anuncia como libre. */
 .mapa .lote { fill: #ced2cb; stroke: #fff; stroke-width: .7; }
 .mapa .lote[data-estado="disponible"] { fill: var(--verde); }
+/* Reservado va en dorado: ni verde de libre ni gris de colocado, porque no es
+   ninguna de las dos. El dorado ya es de la marca y no hay que inventar un
+   color nuevo para el plano. */
+.mapa .lote[data-estado="reservado"] { fill: var(--dorado); }
 .mapa .rotulo-lote { pointer-events: none; }
 /* Estos dos tamaños son el techo, medido en el navegador: con 14 el número
    del lote 5 se sale de su polígono y con 7,6 se salen las áreas del 10 y
@@ -64,6 +68,9 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .mapa .rotulo-lote .area { font-size: 7.2px; text-anchor: middle; fill: #6d766f; }
 .mapa .rotulo-lote[data-estado="disponible"] .numero { fill: #fff; }
 .mapa .rotulo-lote[data-estado="disponible"] .area { fill: #e4efe6; }
+/* Sobre el dorado el blanco no contrasta: el número va en tinta oscura. */
+.mapa .rotulo-lote[data-estado="reservado"] .numero { fill: #3d3005; }
+.mapa .rotulo-lote[data-estado="reservado"] .area { fill: #5c4a0c; }
 
 /* El plano es alto y flaco porque el predio lo es: 420 m de largo por 150 de
    ancho. A todo el ancho de una pantalla de escritorio no cabe a lo alto, así
@@ -83,6 +90,10 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   background: #ced2cb; border: 1px solid var(--borde);
 }
 .leyenda .muestra[data-estado="disponible"] { background: var(--verde); border-color: var(--verde); }
+.leyenda .muestra[data-estado="reservado"] { background: var(--dorado); border-color: var(--dorado); }
+/* La casilla de «Reservado» solo se muestra si hay alguno; la esconde
+   assets/js/mapa.js con el dato, no una decisión escrita a mano acá. */
+.leyenda [hidden] { display: none; }
 
 /* ── Ficha de un lote ────────────────────────────────────────────────────
    Se abre desde el plano y desde las tarjetas. Es un <dialog> nativo: el Esc,
@@ -137,6 +148,7 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   color: #5b635d; background: #eceee9; border-radius: 999px; padding: .2rem .7rem;
 }
 .ficha-estado[data-estado="disponible"] { color: #fff; background: var(--verde); }
+.ficha-estado[data-estado="reservado"] { color: #3d3005; background: #f0dfae; }
 /* El visor 360. La altura es fija porque Pannellum mide su contenedor al
    arrancar: con altura automática mide cero, se dibuja de 0 px y no hay ningún
    error que lo diga. El 16:9 es para que en un teléfono no se coma la pantalla

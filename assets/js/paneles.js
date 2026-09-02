@@ -27,6 +27,7 @@ const ROTULO_CORTO = {
 const ETIQUETA_ESTADO = {
   vendido: 'Vendido',
   disponible: 'Disponible',
+  reservado: 'Reservado',
   especie: 'En especie'
 };
 
@@ -491,10 +492,20 @@ export function construirVistaLotes(vista, inventario) {
 //
 // Estos tres estados son los únicos que `validarInventario` deja pasar, así que
 // ningún lote se queda sin grupo.
+// Un estado que no esté acá NO SALE EN NINGÚN LISTADO: el lote desaparece del
+// tablero y su valor de lista desaparece del total, sin error y sin fila en
+// rojo. Hay una prueba en test/paneles.test.js que recorre ESTADOS y exige que
+// cada uno caiga en un grupo.
+//
+// «reservado» va con los que faltan por vender, no con los colocados: el dueño
+// lo retiró de la venta por un tiempo, pero por ese lote no entró plata y
+// sigue siendo inventario del proyecto. Para el socio que mira el tablero, ese
+// lote todavía vale.
 const GRUPO_DE_ESTADO = {
   vendido: 'vendidos',
   especie: 'vendidos',
-  disponible: 'sinVender'
+  disponible: 'sinVender',
+  reservado: 'sinVender'
 };
 
 // «Colocados» y no «Vendidos» porque el grupo incluye el lote 2, que no se

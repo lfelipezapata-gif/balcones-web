@@ -28,6 +28,7 @@
   <p class="leyenda">
     <span><span class="muestra" data-estado="disponible"></span>Disponible</span>
     <span><span class="muestra" data-estado="vendido"></span>Vendido</span>
+    <span id="leyenda-reservado" hidden><span class="muestra" data-estado="reservado"></span>Reservado</span>
   </p>
   <div id="tarjetas" class="tarjetas"></div>
   <p class="pista">Tocá un lote en el plano o una tarjeta para ver su ficha.</p>
@@ -86,7 +87,11 @@
   // entrar desde afuera.
   const caja = document.getElementById('mapa');
   caja.innerHTML = await (await fetch('img/mapa.svg')).text();
-  pintarMapa(caja.querySelector('svg'), inv);
+  const vistaMapa = pintarMapa(caja.querySelector('svg'), inv);
+
+  // La casilla de «Reservado» de la leyenda sale del dato, no de una decisión
+  // escrita a mano: el día que no quede ninguno reservado, desaparece sola.
+  document.getElementById('leyenda-reservado').hidden = vistaMapa.reservados === 0;
 
   document.getElementById('titular').textContent = v.titular;
   document.getElementById('subtitulo').textContent = v.subtitulo;

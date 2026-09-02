@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 
 import { construirVistaTablero } from '../assets/js/tablero.js';
 import { pesos, metros } from '../assets/js/formato.js';
+import { ESTADOS } from '../assets/js/inventario.js';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   construirTotalesLotes, construirVistaCaja, construirDetalleCifra,
@@ -515,7 +516,12 @@ test('un abonado de $0 real sí suma como cero y no ensucia la marca', () => {
 // El caso feo: se vendió todo y el filtro «Sin vender» se queda sin nada.
 const INV_TODO_VENDIDO = {
   ...INV,
-  lotes: INV.lotes.map(l => ({ ...l, estado: l.estado === 'disponible' ? 'vendido' : l.estado }))
+  // Se venden también los reservados: el grupo «sin vender» los incluye, así
+  // que dejarlos afuera no vaciaría el grupo y la prueba no probaría nada.
+  lotes: INV.lotes.map(l => ({
+    ...l,
+    estado: (l.estado === 'disponible' || l.estado === 'reservado') ? 'vendido' : l.estado
+  }))
 };
 
 test('«Sin vender» sin ningún lote lo dice con palabras, no con una fila de ceros', () => {
@@ -1348,7 +1354,10 @@ test('«Inventario» calcula el precio, no lo lee de ninguna celda', () => {
   assert.equal(lote6.celdas[3], pesos(area * INV.precioM2));
 
   // El pie es el mismo total que la cifra «Inventario» de arriba.
-  const totalArea = INV.lotes.filter(l => l.estado === 'disponible').reduce((t, l) => t + l.area, 0);
+  // «Sin vender» incluye el reservado: para el socio ese lote todavía vale.
+  const totalArea = INV.lotes
+    .filter(l => l.estado === 'disponible' || l.estado === 'reservado')
+    .reduce((t, l) => t + l.area, 0);
   assert.equal(d.pie.valor, pesos(totalArea * INV.precioM2));
   assert.equal(d.pie.etiqueta, metros(totalArea));
 });
@@ -1431,5 +1440,29 @@ test('ningún listado deja salir HTML crudo de la hoja', () => {
     for (const t of textos) {
       assert.doesNotMatch(String(t), /<img|<svg|<script/, `«${clave}» sacó texto sin escapar: ${t}`);
     }
+  }
+});
+
+// ── Ningún estado puede caerse del tablero en silencio ───────────────────────
+// `GRUPO_DE_ESTADO` decide en qué listado cae cada lote. Un estado que no esté
+// ahí no sale ni en «Colocados» ni en «Los lotes sin vender»: el lote
+// desaparece del tablero de socios y su valor de lista desaparece del total,
+// sin un error, sin una fila en rojo, sin nada. Es la forma más silenciosa que
+// tiene este código de perder plata de vista.
+//
+// Se descubrió el 2-sep-2026 al agregar «reservado» por el lote 12, que son
+// $303.600.000 de inventario.
+test('todos los estados del inventario caen en algún listado del tablero', () => {
+  const vista = vistaDe();
+  for (const estado of ESTADOS) {
+    const inventario = {
+      precioM2: 110000,
+      lotes: [{ n: 1, sector: 1, area: 2000, estado }]
+    };
+    const colocados = construirDetalleCifra('vendido', vista, inventario);
+    const sinVender = construirDetalleCifra('disponible', vista, inventario);
+    const total = colocados.filas.length + sinVender.filas.length;
+    assert.equal(total, 1,
+      `el estado «${estado}» no aparece en ningún listado: el lote se pierde del tablero`);
   }
 });

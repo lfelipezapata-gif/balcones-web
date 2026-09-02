@@ -163,17 +163,20 @@ test('si se vende un lote, el plano lo pinta gris sin tocar el SVG', () => {
   assert.equal(despues.lotes.find(l => l.n === 6).estado, 'vendido');
   assert.equal(despues.lotes.find(l => l.n === 6).descripcion, 'Lote 6 · 2.140 m² · vendido');
   assert.equal(despues.titulo,
-    'Plano del loteo. 6 lotes disponibles en verde, 8 colocados en gris.');
+    'Plano del loteo. 5 lotes disponibles en verde, 8 colocados en gris, 1 reservado en dorado.');
   // Y el archivo del plano no se tocó: la misma geometría sirve para los dos.
   assert.equal(readFileSync(new URL('../img/mapa.svg', import.meta.url), 'utf8'), SVG);
 });
 
 test('el título del plano cuenta lo mismo que el titular de la vitrina', () => {
   const v = construirVistaMapa(INV);
-  const disponibles = INV.lotes.filter(l => l.estado === 'disponible').length;
-  const colocados = INV.lotes.length - disponibles;
+  const cuenta = (e) => INV.lotes.filter(l => l.estado === e).length;
+  const disponibles = cuenta('disponible');
+  const reservados = cuenta('reservado');
+  const colocados = cuenta('vendido') + cuenta('especie');
   assert.equal(v.titulo,
-    `Plano del loteo. ${disponibles} lotes disponibles en verde, ${colocados} colocados en gris.`);
+    `Plano del loteo. ${disponibles} lotes disponibles en verde, ` +
+    `${colocados} colocados en gris, ${reservados} reservado en dorado.`);
 });
 
 test('el título de cada sector sale del inventario, no está escrito a mano', () => {
@@ -235,8 +238,9 @@ test('pintar le pone a cada polígono el estado que dice el inventario', () => {
   assert.equal(estado(6), 'disponible');
   assert.equal(estado(1), 'vendido');
   assert.equal(estado(2), 'especie');
+  assert.equal(estado(12), 'reservado');
   const verdes = svg.todos.filter(t => t.clase === 'lote' && t.atributos['data-estado'] === 'disponible');
-  assert.equal(verdes.length, 7);
+  assert.equal(verdes.length, 6);
 });
 
 test('pintar se niega si el plano y el inventario no hablan de los mismos lotes', () => {
@@ -254,6 +258,6 @@ test('un inventario inválido no llega a pintarse', () => {
   assert.throws(() => construirVistaMapa({ precioM2: 110000, lotes: [] }));
   assert.throws(() => construirVistaMapa({
     precioM2: 110000,
-    lotes: [{ n: 1, sector: 1, area: 100, estado: 'reservado' }]
+    lotes: [{ n: 1, sector: 1, area: 100, estado: 'permutado' }]
   }));
 });

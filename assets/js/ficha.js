@@ -21,6 +21,7 @@ export const WHATSAPP = '573203769226';
 // en especie»). Son dos presentaciones distintas del mismo dato, no una copia.
 const ETIQUETA = {
   disponible: 'Disponible',
+  reservado: 'Reservado',
   vendido: 'Vendido',
   especie: 'Pago en especie'
 };

@@ -72,8 +72,20 @@ const CELULAR = /3\d{2}[ .-]?\d{3}[ .-]?\d{4}/;
 // No es una fuga, es el contacto de ventas.
 const CELULAR_COMERCIAL_PERMITIDO = new Set(['3203769226', '573203769226']);
 
+// `vendor/` queda FUERA de esta segunda prueba, y solo de esta. Son librerías
+// de terceros minificadas: código sin espacios, lleno de constantes numéricas
+// largas donde cualquier heurística de dígitos encuentra algo. Pannellum trae
+// los decimales de pi («…3589793238») y eso pasa por celular colombiano.
+//
+// La primera prueba —llaves privadas, credenciales, correos personales, el
+// nombre del dueño— SÍ sigue corriendo sobre vendor/, y esa es la que atrapa
+// una fuga de verdad. Nadie escribe un teléfono personal dentro de una
+// librería minificada que se baja de un CDN; el riesgo que justificaba
+// escanearlo todo era `docs/`, no este.
+const paraDatosPersonales = archivos.filter(f => !f.startsWith('vendor/'));
+
 test('ningún archivo versionado trae cédulas ni celulares personales', () => {
-  for (const f of archivos) {
+  for (const f of paraDatosPersonales) {
     const texto = leer(f);
     if (texto === null) continue;
 
