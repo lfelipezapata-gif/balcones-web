@@ -36,26 +36,31 @@
 </section>
 
 <dialog id="ficha" class="ficha" aria-labelledby="ficha-titulo">
-  <form method="dialog" class="ficha-cerrar-caja">
-    <button class="ficha-cerrar" aria-label="Cerrar la ficha">✕</button>
-  </form>
   <div class="ficha-barra">
     <span class="ficha-barra-texto"></span>
     <button class="ficha-reducir" type="button">Salir</button>
   </div>
-  <h3 id="ficha-titulo" class="ficha-titulo"></h3>
-  <p class="ficha-estado"></p>
-  <div class="ficha-pano-caja" hidden>
-    <div class="ficha-pano"></div>
-    <button class="ficha-agrandar" type="button">Ver en grande</button>
+  <!-- Lo que se desplaza. El botón de WhatsApp queda FUERA a propósito: así
+       se ve siempre, sin depender de un `sticky` dentro de una caja con
+       relleno, que deja un vacío debajo. -->
+  <div class="ficha-cuerpo">
+    <form method="dialog" class="ficha-cerrar-caja">
+      <button class="ficha-cerrar" aria-label="Cerrar la ficha">✕</button>
+    </form>
+    <h3 id="ficha-titulo" class="ficha-titulo"></h3>
+    <p class="ficha-estado"></p>
+    <div class="ficha-pano-caja" hidden>
+      <div class="ficha-pano"></div>
+      <button class="ficha-agrandar" type="button">Ver en grande</button>
+    </div>
+    <dl class="ficha-datos">
+      <div><dt>Área</dt><dd class="ficha-area"></dd></div>
+      <div><dt>Precio</dt><dd class="ficha-precio"></dd></div>
+      <div><dt>Valor</dt><dd class="ficha-precio-m2"></dd></div>
+      <div><dt>Ubicación</dt><dd class="ficha-sector"></dd></div>
+    </dl>
+    <a class="ficha-mapa" href="" target="_blank" rel="noopener" hidden>Ver dónde queda en el mapa</a>
   </div>
-  <dl class="ficha-datos">
-    <div><dt>Área</dt><dd class="ficha-area"></dd></div>
-    <div><dt>Precio</dt><dd class="ficha-precio"></dd></div>
-    <div><dt>Valor</dt><dd class="ficha-precio-m2"></dd></div>
-    <div><dt>Ubicación</dt><dd class="ficha-sector"></dd></div>
-  </dl>
-  <a class="ficha-mapa" href="" target="_blank" rel="noopener" hidden>Ver dónde queda en el mapa</a>
   <a class="boton ficha-whatsapp" href="" hidden>Preguntar por este lote</a>
 </dialog>
 

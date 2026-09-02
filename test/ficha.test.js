@@ -156,6 +156,20 @@ test('el CSS define el modo agrandado del diálogo', () => {
   assert.match(css, /\.ficha\.agrandada\s+\.ficha-pano\b/, 'la vista no se estira al agrandar');
 });
 
+// El boton de WhatsApp tiene que quedarse a la vista mientras se desplaza la
+// ficha. Con la vista 360 vertical en un telefono queda bajo el pliegue, y el
+// momento de escribir es justo despues de mirar el lote, no dos deslizadas
+// despues.
+test('el botón de WhatsApp queda pegado al borde inferior de la ficha', () => {
+  const css = readFileSync(new URL('../assets/css/estilos.css', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  // El botón tiene que estar FUERA del cuerpo que se desplaza.
+  const cuerpo = html.match(/<div class="ficha-cuerpo">[\s\S]*?<\/div>\s*<a class="boton ficha-whatsapp"/);
+  assert.ok(cuerpo, 'el botón de WhatsApp quedó dentro de .ficha-cuerpo o falta el cuerpo');
+  assert.match(css, /\.ficha \{[^}]*display:\s*flex/, '.ficha tiene que ser columna');
+  assert.match(css, /\.ficha-cuerpo \{[^}]*overflow:\s*auto/, 'el cuerpo es el que se desplaza');
+});
+
 // ── El enlace al mapa ───────────────────────────────────────────────────────
 // «A 3,5 km del parque» no le dice nada a alguien que no conoce Santa Rosa.
 // El alfiler sí: abre Google Maps en el punto exacto del lote y desde ahí se

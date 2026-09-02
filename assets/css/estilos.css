@@ -206,14 +206,17 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .tarjeta .abrir:focus-visible { outline: 2px solid var(--verde); outline-offset: 3px; }
 
 .ficha {
-  border: 0; border-radius: 12px; padding: 1.5rem;
+  border: 0; border-radius: 12px; padding: 0;
   width: min(28rem, calc(100vw - 2rem));
-  /* Con la vista 360 vertical en un teléfono la ficha ya no cabe entera de
-     una: sin este tope se sale de la pantalla y el botón de WhatsApp queda
-     inalcanzable. */
-  max-height: 90dvh; overflow: auto;
+  /* Columna: arriba lo que se desplaza, abajo el botón, que no se mueve.
+     Con la vista 360 vertical en un teléfono la ficha ya no cabe entera de
+     una, y el momento de escribir es justo después de mirar el lote — no dos
+     deslizadas después. */
+  max-height: 90dvh; overflow: hidden;
+  display: flex; flex-direction: column;
   color: var(--tinta); background: #fff;
 }
+.ficha-cuerpo { overflow: auto; padding: 1.5rem; }
 .ficha::backdrop { background: rgba(2, 24, 12, .55); }
 .ficha-cerrar-caja { float: right; margin: -.5rem -.5rem 0 0; }
 .ficha-cerrar {
@@ -302,6 +305,10 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
   color: var(--verde-marca); background: #f3efe4;
   border: 0; border-radius: 999px; padding: .4rem 1rem; cursor: pointer;
 }
+.ficha.agrandada .ficha-cuerpo {
+  flex: 1; min-height: 0; padding: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+}
 .ficha.agrandada .ficha-pano-caja { flex: 1; margin: 0; min-height: 0; }
 .ficha.agrandada .ficha-pano { aspect-ratio: auto; height: 100%; border-radius: 0; }
 .ficha.agrandada .boton { margin: 0; border-radius: 0; }
@@ -327,7 +334,10 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .ficha-mapa::before { content: '◎ '; }
 .ficha.agrandada .ficha-mapa { display: none; }
 
-.ficha .boton { margin-top: 1.25rem; }
+/* El boton es la ultima fila de la columna y no se desplaza nunca. Se probo
+   antes con `position: sticky` dentro del cuerpo con relleno y no sirve: la
+   franja queda flotando a media ficha con un vacio blanco debajo. */
+.ficha .boton { flex: none; margin: 0; border-radius: 0 0 12px 12px; }
 .ficha .boton[hidden] { display: none; }
 
 .tablero .frescura { color: #6b6b6b; font-size: .9rem; margin: .25rem 0 0; }
