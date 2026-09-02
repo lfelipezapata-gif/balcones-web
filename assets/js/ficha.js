@@ -73,11 +73,18 @@ export function construirFichaLote(json, n) {
 // que mira. Hacia abajo no se corta: el dron sí fotografía el suelo, y el
 // suelo es el lote que se está vendiendo.
 //
-// 50° es el punto de partida. Con la primera panorámica real hay que subirlo
-// o bajarlo mirando hasta dónde llega el hueco de este dron en particular:
-// el gimbal del Mini 5 Pro gira 225° y el hueco puede ser más chico que el de
-// los modelos viejos.
-const MAX_PITCH = 50;
+// MEDIDO SOBRE LAS SEIS PANORÁMICAS REALES del vuelo del 2-sep-2026, y salió
+// mucho mejor de lo que suponía: el gimbal de 225° del Mini 5 Pro llena el
+// cenit. La zona sin detalle va de 21 a 110 filas de 2048 —o sea que el cielo
+// real empieza entre +88° y +80°— y encima está rellena de AZUL DE CIELO
+// (RGB 170,192,216 en la peor), no del gris o el negro de los modelos viejos.
+// Mirando la franja de arriba a ojo no se distingue nada.
+//
+// Por eso el corte pasó de 50° a 85°: a 50° se estaban botando treinta grados
+// de cielo bueno para esconder algo que no se ve. Se deja en 85 y no en 90
+// como guarda barata, por si una panorámica futura sale con un hueco de
+// verdad. Si eso pasa, este es el número que se baja.
+const MAX_PITCH = 85;
 
 export function configPano(ficha) {
   if (!ficha.pano) return null;

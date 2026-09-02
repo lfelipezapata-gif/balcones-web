@@ -36,25 +36,29 @@
       "n": 6,
       "sector": 1,
       "area": 2140,
-      "estado": "disponible"
+      "estado": "disponible",
+      "pano": "img/pano/lote-06.jpg"
     },
     {
       "n": 7,
       "sector": 1,
       "area": 2129,
-      "estado": "disponible"
+      "estado": "disponible",
+      "pano": "img/pano/lote-07.jpg"
     },
     {
       "n": 8,
       "sector": 1,
       "area": 2228,
-      "estado": "disponible"
+      "estado": "disponible",
+      "pano": "img/pano/lote-08.jpg"
     },
     {
       "n": 9,
       "sector": 1,
       "area": 2205,
-      "estado": "disponible"
+      "estado": "disponible",
+      "pano": "img/pano/lote-09.jpg"
     },
     {
       "n": 10,
@@ -66,7 +70,8 @@
       "n": 11,
       "sector": 1,
       "area": 2487,
-      "estado": "disponible"
+      "estado": "disponible",
+      "pano": "img/pano/lote-11.jpg"
     },
     {
       "n": 12,
@@ -78,7 +83,8 @@
       "n": 13,
       "sector": 2,
       "area": 2719,
-      "estado": "disponible"
+      "estado": "disponible",
+      "pano": "img/pano/lote-13.jpg"
     },
     {
       "n": 14,

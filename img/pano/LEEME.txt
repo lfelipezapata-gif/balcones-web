@@ -27,12 +27,26 @@ app DJI Fly, que es el paso donde se pierde el trabajo de una manana— estan
 arriba de todo en ese mismo script.
 
 
-UNA COSA MAS
-------------
-El visor corta la mirada hacia arriba a 50 grados, a proposito: el gimbal del
-dron no alcanza a fotografiar el cielo justo encima y toda esferica trae un
-hueco ahi. El corte vive en MAX_PITCH, en assets/js/ficha.js.
+EL HUECO DEL CENIT — MEDIDO EL 2-SEP-2026
+-----------------------------------------
+El visor corta la mirada hacia arriba en MAX_PITCH (assets/js/ficha.js) porque
+el gimbal del dron puede no alcanzar a fotografiar el cielo justo encima.
 
-Con la primera panoramica real hay que mirar hasta donde llega ese hueco en el
-Mini 5 Pro y ajustar el numero. Si queda muy bajo se pierde cielo bueno; si
-queda muy alto se ve el tapon.
+En el Mini 5 Pro casi no pasa. Medido sobre las seis del vuelo del 2 de
+septiembre, la zona sin detalle va de 21 a 110 filas de 2048 —el cielo real
+empieza entre 88 y 80 grados— y esta rellena de azul de cielo, no de gris. A
+ojo no se distingue.
+
+Por eso el corte quedo en 85 grados y no en los 50 que tenia al principio. Si
+alguna panoramica futura sale con un tapon visible, este es el numero que se
+baja.
+
+LOS NOMBRES QUE ACEPTA EL SCRIPT
+--------------------------------
+«LOTE 6.JPG» o «6.jpg», en mayuscula o minuscula. Lo que NO acepta es un
+nombre con mas cosas adentro («lote 6 bueno.jpg», «DJI_0473.jpg»): de ahi el
+numero se adivina, y adivinar mal es publicar la panoramica del vecino.
+
+Tampoco acepta dos archivos para el mismo lote. Y la carpeta que se le pasa
+tiene que tener SOLO las panoramicas: si se le apunta a Descargas entera,
+protesta por cada foto de WhatsApp que encuentre.

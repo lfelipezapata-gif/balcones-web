@@ -97,10 +97,13 @@ test('el visor recibe la panorámica como equirectangular', () => {
   assert.equal(c.panorama, 'img/pano/lote-07.jpg');
 });
 
-// Esta es la que no se puede perder. El gimbal del dron no alcanza a mirar
-// derecho hacia arriba, así que TODA esférica de dron trae un hueco en el
-// cenit. Si el visor deja subir la mirada hasta el tope, el comprador ve un
-// tapón gris donde debería estar el cielo y piensa que la foto está mala.
+// El corte de arriba existe por el hueco del cenit: el gimbal del dron puede
+// no alcanzar a mirar derecho hacia arriba y dejar un tapón donde debería ir
+// el cielo. Medido sobre el vuelo del 2-sep-2026, en el Mini 5 Pro ese hueco
+// es de 1 a 5 grados y está relleno de azul de cielo, así que el corte quedó
+// en 85° y es casi todo el domo — pero sigue existiendo, y esta prueba lo
+// sostiene para que nadie lo suba a 90 sin haber mirado una panorámica.
+//
 // Mirar hacia abajo sí está permitido: el dron sí fotografía el nadir, y el
 // suelo es justamente el lote que está vendiendo.
 test('el visor no deja llegar al hueco del cenit', () => {

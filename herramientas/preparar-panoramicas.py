@@ -60,6 +60,16 @@ CALIDAD = 80
 PROPORCION = 2.0
 TOLERANCIA = 0.03
 
+# De donde sale el numero del lote. Se acepta «LOTE 6.jpg» ademas de «6.jpg»
+# porque asi las nombro Luis Felipe el 2-sep-2026 al exportarlas del telefono,
+# y «LOTE 11» se lee mejor que «11» en una carpeta con cien archivos.
+#
+# Lo que NO se acepta es un nombre con mas cosas adentro. «lote 6 bueno.jpg» o
+# «DJI_0473.jpg» quedan fuera a proposito: de un nombre asi el numero se
+# adivina, y adivinar mal significa publicar la panoramica del vecino en la
+# ficha de un lote.
+NOMBRE_LOTE = re.compile(r'(?:lote[\s_-]*)?(\d{1,2})', re.IGNORECASE)
+
 
 def mide(ruta):
     return ruta.stat().st_size / 1024 / 1024
@@ -85,14 +95,15 @@ def revisar(origen, inv):
         sys.exit(f'No hay ningún .jpg en {origen}')
 
     for ruta in archivos:
-        if not re.fullmatch(r'\d+', ruta.stem):
+        m = NOMBRE_LOTE.fullmatch(ruta.stem.strip())
+        if not m:
             problemas.append(
-                f'{ruta.name}: el nombre tiene que ser solo el número del lote '
-                f'(6.jpg, 7.jpg). Renombralo.'
+                f'{ruta.name}: del nombre no se saca el número del lote. '
+                f'Sirve «LOTE 6.jpg» o «6.jpg».'
             )
             continue
 
-        n = int(ruta.stem)
+        n = int(m.group(1))
         lote = numeros.get(n)
         if lote is None:
             problemas.append(f'{ruta.name}: el inventario no tiene ningún lote {n}.')
@@ -115,6 +126,19 @@ def revisar(origen, inv):
             'n': n, 'ruta': ruta, 'estado': lote['estado'],
             'ancho': ancho, 'alto': alto, 'mb': mide(ruta)
         })
+
+    # Dos archivos para el mismo lote. Pasa con «LOTE 6.jpg» y «6.jpg» juntos,
+    # o con una copia «LOTE 6 (1).jpg». Sin esta comprobacion el segundo pisa
+    # al primero sin decir nada y queda publicada la que no era.
+    porLote = {}
+    for t in trabajos:
+        porLote.setdefault(t['n'], []).append(t['ruta'].name)
+    for n, nombres in sorted(porLote.items()):
+        if len(nombres) > 1:
+            problemas.append(
+                f'el lote {n} tiene {len(nombres)} archivos: ' + ', '.join(nombres) +
+                '. Dejá uno solo.'
+            )
 
     return trabajos, problemas
 
