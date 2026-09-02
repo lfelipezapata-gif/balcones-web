@@ -128,3 +128,30 @@ test('Pannellum está en vendor y pesa lo que debe pesar una librería', () => {
     assert.ok(real <= kb, `vendor/${f} pesa ${real} KB y el tope son ${kb} KB`);
   }
 });
+
+// La ficha se puede abrir a pantalla completa. Es lo unico que hace usable el
+// 360 en un telefono: dentro del modal la vista mide ~290x360 y a pantalla
+// completa 375x690, casi cuatro veces el area.
+//
+// Se comprueba el marcado y no el comportamiento porque el comportamiento es
+// puro DOM y CSS. Lo que esta prueba impide es que alguien borre uno de los
+// tres pedazos y deje el boton sin salida o la barra sin boton.
+test('el marcado trae los tres pedazos de la pantalla completa', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  for (const [clase, para] of [
+    ['ficha-agrandar', 'el botón que entra a pantalla completa'],
+    ['ficha-reducir', 'el botón que sale de pantalla completa'],
+    ['ficha-barra-texto', 'el lote, el área y el precio mientras se mira la vista']
+  ]) {
+    assert.ok(html.includes(`class="${clase}"`) || html.includes(`"${clase}"`),
+      `index.html no trae .${clase}: falta ${para}`);
+  }
+});
+
+// Sin `.agrandada` el <dialog> se queda del tamaño del modal y la vista no
+// crece: el boton quedaria puesto y sin efecto.
+test('el CSS define el modo agrandado del diálogo', () => {
+  const css = readFileSync(new URL('../assets/css/estilos.css', import.meta.url), 'utf8');
+  assert.match(css, /\.ficha\.agrandada\s*\{/, 'falta la regla .ficha.agrandada');
+  assert.match(css, /\.ficha\.agrandada\s+\.ficha-pano\b/, 'la vista no se estira al agrandar');
+});

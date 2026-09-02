@@ -179,6 +179,8 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
   // error a la vista. Por eso se destruye siempre antes de crear.
   let visor = null;
   const caja = dialogo.querySelector('.ficha-pano');
+  const panoCaja = dialogo.querySelector('.ficha-pano-caja');
+  const barra = dialogo.querySelector('.ficha-barra-texto');
 
   // Cada apertura lleva un número. La librería se carga esperando, y en ese
   // rato el visitante puede haber cerrado o saltado a otro lote: si al volver
@@ -196,7 +198,11 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     const mio = ++turno;
     soltarPano();
     const config = configPano(f);
-    caja.hidden = !config;
+    panoCaja.hidden = !config;
+    // Lo que se lee arriba en pantalla completa. Ahí no caben la tabla de
+    // datos ni el precio en su fila: si no se resume acá, el que está mirando
+    // la vista deja de ver cuánto vale, que es la mitad de la decisión.
+    barra.textContent = `${f.titulo} · ${f.areaTexto} · ${f.precioTexto}`;
     if (!config) return;
 
     try {
@@ -205,14 +211,45 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
       // Sin visor la ficha sigue sirviendo: área, precio y el botón de
       // WhatsApp son lo que cierra la venta. Una panorámica que no cargó no
       // puede llevarse el resto de la ficha por delante.
-      caja.hidden = true;
+      panoCaja.hidden = true;
       return;
     }
     if (mio !== turno || !dialogo.open) return;
     visor = window.pannellum.viewer(caja, config);
   }
 
-  dialogo.addEventListener('close', soltarPano);
+  // Pantalla completa.
+  //
+  // No se usa la API de pantalla completa del navegador a propósito: en iPhone
+  // `requestFullscreen` no funciona sobre un div —solo sobre un <video>—, y el
+  // teléfono es justamente donde el recuadro chico molesta. Esto es una clase
+  // de CSS que estira el <dialog> a todo el viewport, y eso sí anda igual en
+  // todas partes.
+  //
+  // Pannellum mide su contenedor UNA VEZ, al arrancar. Si se le cambia el
+  // tamaño por CSS y no se le avisa, el lienzo se queda del tamaño viejo y la
+  // imagen sale estirada. De ahí el `resize()` después de cada cambio.
+  function agrandar(si) {
+    dialogo.classList.toggle('agrandada', si);
+    if (visor) visor.resize();
+  }
+
+  dialogo.querySelector('.ficha-agrandar').addEventListener('click', () => agrandar(true));
+  dialogo.querySelector('.ficha-reducir').addEventListener('click', () => agrandar(false));
+
+  // Con Esc, primero se sale de pantalla completa y solo después se cierra la
+  // ficha. Cerrar de una en el primer Esc devuelve al visitante hasta el
+  // listado, dos pasos más atrás de donde quería ir.
+  dialogo.addEventListener('cancel', (e) => {
+    if (!dialogo.classList.contains('agrandada')) return;
+    e.preventDefault();
+    agrandar(false);
+  });
+
+  dialogo.addEventListener('close', () => {
+    soltarPano();
+    dialogo.classList.remove('agrandada');
+  });
 
   for (const poligono of svg.querySelectorAll('.lote[data-lote]')) {
     poligono.setAttribute('role', 'button');

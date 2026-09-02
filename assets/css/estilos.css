@@ -129,6 +129,10 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .ficha {
   border: 0; border-radius: 12px; padding: 1.5rem;
   width: min(28rem, calc(100vw - 2rem));
+  /* Con la vista 360 vertical en un teléfono la ficha ya no cabe entera de
+     una: sin este tope se sale de la pantalla y el botón de WhatsApp queda
+     inalcanzable. */
+  max-height: 90dvh; overflow: auto;
   color: var(--tinta); background: #fff;
 }
 .ficha::backdrop { background: rgba(2, 24, 12, .55); }
@@ -149,18 +153,79 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 }
 .ficha-estado[data-estado="disponible"] { color: #fff; background: var(--verde); }
 .ficha-estado[data-estado="reservado"] { color: #3d3005; background: #f0dfae; }
-/* El visor 360. La altura es fija porque Pannellum mide su contenedor al
-   arrancar: con altura automática mide cero, se dibuja de 0 px y no hay ningún
-   error que lo diga. El 16:9 es para que en un teléfono no se coma la pantalla
-   entera y el precio quede debajo del pliegue. */
-.ficha-pano {
+/* El visor 360. La altura sale de la proporción porque Pannellum mide su
+   contenedor al arrancar: con altura automática mide cero, se dibuja de 0 px y
+   no hay ningún error que lo diga.
+
+   En escritorio va 16:9. En teléfono va 4:5, o sea vertical: ahí el modal mide
+   unos 340 px de ancho y en 16:9 la vista quedaba de 190 px de alto, que es
+   una rendija. Vertical se lleva la mitad de la pantalla, que es lo que hace
+   que valga la pena girarla con el dedo. */
+.ficha-pano-caja {
+  position: relative;
   margin: 1.25rem 0 0;
+}
+.ficha-pano-caja[hidden] { display: none; }
+.ficha-pano {
   aspect-ratio: 16 / 9;
   border-radius: 8px;
   overflow: hidden;
   background: #eceee9;
 }
-.ficha-pano[hidden] { display: none; }
+@media (max-width: 699px) {
+  .ficha-pano { aspect-ratio: 4 / 5; }
+}
+
+/* El botón de agrandar va SOBRE la vista, no debajo: debajo se lo come el
+   pliegue en un teléfono y nadie se entera de que existe. Va abajo a la
+   derecha, lejos de los controles de zoom que Pannellum pone arriba a la
+   izquierda. */
+.ficha-agrandar {
+  position: absolute; right: .5rem; bottom: .5rem;
+  font: inherit; font-size: .85rem; font-weight: 600;
+  color: var(--tinta); background: rgba(255, 255, 255, .92);
+  border: 0; border-radius: 999px; padding: .45rem .9rem;
+  cursor: pointer;
+}
+.ficha-agrandar:hover { background: #fff; }
+
+/* La barra de pantalla completa. Fuera de ese modo no existe. */
+.ficha-barra { display: none; }
+
+/* ── Pantalla completa ────────────────────────────────────────────────────
+   El <dialog> se estira a todo el viewport. `dvh` y no `vh` porque en un
+   teléfono `vh` cuenta la barra de direcciones que se esconde al bajar, y con
+   `vh` el borde inferior queda tapado justo donde está el botón de WhatsApp.
+
+   Lo que se esconde acá —la tabla de datos, el estado, el título grande— no
+   se pierde: vive resumido en la barra de arriba. El botón de WhatsApp SÍ se
+   queda, porque es el momento en que alguien está mirando su lote. */
+.ficha.agrandada {
+  width: 100vw; max-width: none;
+  height: 100dvh; max-height: none;
+  margin: 0; padding: 0; border-radius: 0;
+  display: flex; flex-direction: column;
+}
+.ficha.agrandada .ficha-cerrar-caja,
+.ficha.agrandada .ficha-titulo,
+.ficha.agrandada .ficha-estado,
+.ficha.agrandada .ficha-datos,
+.ficha.agrandada .ficha-agrandar { display: none; }
+
+.ficha.agrandada .ficha-barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .75rem 1rem;
+  background: var(--verde-marca); color: #f3efe4;
+  font-size: .95rem;
+}
+.ficha.agrandada .ficha-reducir {
+  font: inherit; font-weight: 600; white-space: nowrap;
+  color: var(--verde-marca); background: #f3efe4;
+  border: 0; border-radius: 999px; padding: .4rem 1rem; cursor: pointer;
+}
+.ficha.agrandada .ficha-pano-caja { flex: 1; margin: 0; min-height: 0; }
+.ficha.agrandada .ficha-pano { aspect-ratio: auto; height: 100%; border-radius: 0; }
+.ficha.agrandada .boton { margin: 0; border-radius: 0; }
 /* Pannellum le pone la clase `pnlm-container` AL MISMO div, no a uno adentro.
    Con un selector de descendiente («.ficha-pano .pnlm-container») la regla no
    engancha nunca y manda el borde gris que trae la librería. */

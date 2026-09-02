@@ -38,9 +38,16 @@
   <form method="dialog" class="ficha-cerrar-caja">
     <button class="ficha-cerrar" aria-label="Cerrar la ficha">✕</button>
   </form>
+  <div class="ficha-barra">
+    <span class="ficha-barra-texto"></span>
+    <button class="ficha-reducir" type="button">Salir</button>
+  </div>
   <h3 id="ficha-titulo" class="ficha-titulo"></h3>
   <p class="ficha-estado"></p>
-  <div class="ficha-pano" hidden></div>
+  <div class="ficha-pano-caja" hidden>
+    <div class="ficha-pano"></div>
+    <button class="ficha-agrandar" type="button">Ver en grande</button>
+  </div>
   <dl class="ficha-datos">
     <div><dt>Área</dt><dd class="ficha-area"></dd></div>
     <div><dt>Precio</dt><dd class="ficha-precio"></dd></div>
