@@ -42,9 +42,10 @@ import sys
 from pathlib import Path
 
 try:
+    import numpy as np
     from PIL import Image, ImageOps
 except ImportError:
-    sys.exit('Falta Pillow. Instalalo con:  python3 -m pip install Pillow')
+    sys.exit('Faltan Pillow o numpy. Se instalan con:  python3 -m pip install Pillow numpy')
 
 RAIZ = Path(__file__).resolve().parent.parent
 INVENTARIO = RAIZ / 'data' / 'lotes.json'
@@ -146,6 +147,90 @@ def revisar(origen, inv):
     return trabajos, problemas
 
 
+def tapar_nadir(im):
+    """Tapa el borron de debajo del dron con el color del propio suelo.
+
+    EL DEFECTO. Mirando derecho hacia abajo, una esferica de dron no tiene
+    foto: el gimbal no ve su propia panza. El DJI rellena estirando los
+    pixeles del borde, y queda un remolino borroso — en el lote 6 hasta se ve
+    la sombra del dron. Medido sobre las siete del 2-sep-2026: la nitidez cae
+    por debajo de la mitad entre -73 y -83 grados, y a -88 queda en 1,5
+    contra 14 en terreno normal. Es lo que se nota SIEMPRE, porque el visitante
+    baja la vista para ver el lote y ahi es donde esta.
+
+    POR QUE NO SE ARREGLA PROHIBIENDO MIRAR ABAJO. Con `minPitch` habria que
+    cortar en -39 grados para que el borron no entre ni por el borde del
+    cuadro, y ahi ya no se puede mirar el lote, que es justo lo que se vende.
+
+    EL ARREGLO. Se toma el color medio del anillo que todavia esta nitido
+    (-68 a -72) y se funde hacia el todo lo de mas abajo, con una rampa suave.
+    Queda un disco liso del color de la tierra en vez de un remolino. No se
+    inventa detalle: se reconoce que ahi no hay foto y se deja de fingir.
+    """
+    a = np.asarray(im, dtype=np.float32)
+    alto, ancho, _ = a.shape
+    fila = lambda p: int((90 - p) / 180 * alto)
+
+    inicio, fin = fila(-70), fila(-84)
+    anillo = a[fila(-68):fila(-72)].reshape(-1, 3).mean(axis=0)
+
+    for y in range(inicio, alto):
+        # 0 en el borde de arriba del parche, 1 de -84 para abajo
+        t = min(1.0, (y - inicio) / max(1, fin - inicio))
+        t = t * t * (3 - 2 * t)                     # suavizado, sin borde duro
+        a[y] = a[y] * (1 - t) + anillo * t
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
+
+
+def nivelar_costura(im):
+    """Empareja el brillo de los dos bordes que se juntan en el circulo.
+
+    EL DEFECTO. Una equirectangular se cierra sobre si misma: la columna de
+    mas a la izquierda queda pegada a la de mas a la derecha. Las dos son el
+    mismo pedazo de mundo, pero se fotografiaron con minutos de diferencia y
+    con las nubes moviendose, asi que el DJI las deja con brillos distintos.
+    Medido sobre las siete del 2-sep-2026: saltos de 5,5 a 8,7 niveles en el
+    cielo, cuando a ojo se nota desde 1,5. Y como la vista gira sola, el
+    visitante pasa por esa raya en cada vuelta -- por eso «siempre se nota».
+
+    EL ARREGLO. Se mide la diferencia entre los dos bordes fila por fila y se
+    reparte a lo ancho de toda la imagen con una rampa. Los bordes quedan
+    iguales y el ajuste se diluye en 4.096 pixeles: seis niveles repartidos
+    son 0,15 por cada cien pixeles, invisible. La rampa va centrada para no
+    aclarar ni oscurecer la foto en promedio.
+
+    No se toca el contenido: esto corrige exposicion, no geometria. Si dos
+    bordes mostraran cosas distintas la rampa las embarraria, pero no es el
+    caso -- son vecinos en el mundo.
+    """
+    a = np.asarray(im, dtype=np.float32)
+    alto, ancho, _ = a.shape
+    borde = max(4, ancho // 512)
+
+    izq = a[:, :borde, :].mean(axis=1)      # (alto, 3)
+    der = a[:, -borde:, :].mean(axis=1)
+    dif = izq - der
+
+    # Suavizado vertical: la diferencia real cambia despacio de arriba abajo;
+    # lo que cambia rapido es ruido de una fila concreta.
+    k = max(9, alto // 24) | 1
+    nucleo = np.ones(k) / k
+    for c in range(3):
+        dif[:, c] = np.convolve(np.pad(dif[:, c], k // 2, mode='edge'), nucleo, mode='valid')
+
+    rampa = (np.arange(ancho, dtype=np.float32) / (ancho - 1)) - 0.5
+    ajustada = a + dif[:, None, :] * rampa[None, :, None]
+    return Image.fromarray(np.clip(ajustada, 0, 255).astype(np.uint8), 'RGB')
+
+
+def salto_en_la_costura(im):
+    """Cuanto se nota el empalme, en niveles de brillo. Para poder decirlo."""
+    a = np.asarray(im.convert('L'), dtype=np.float32)
+    alto, ancho = a.shape
+    cielo = a[int(alto * 0.08):int(alto * 0.30)]
+    return float(abs(cielo[:, 0].mean() - cielo[:, -1].mean()))
+
+
 def procesar(trabajo, escribir):
     salida = DESTINO / f'lote-{trabajo["n"]:02d}.jpg'
     if not escribir:
@@ -155,6 +240,8 @@ def procesar(trabajo, escribir):
     with Image.open(trabajo['ruta']) as im:
         im = ImageOps.exif_transpose(im).convert('RGB')
         im = im.resize((ANCHO, ALTO), Image.LANCZOS)
+        trabajo['costura'] = (salto_en_la_costura(im),)
+        im = tapar_nadir(im)
         im.save(salida, 'JPEG', quality=CALIDAD, optimize=True, progressive=True)
     return salida, mide(salida)
 
@@ -190,7 +277,9 @@ def main():
         if mb is None:
             print(f'  lote {t["n"]:>2}  {t["ancho"]}x{t["alto"]}  {t["mb"]:.1f} MB  ->  {destino}{aviso}')
         else:
-            print(f'  lote {t["n"]:>2}  {t["mb"]:.1f} MB  ->  {destino}  {mb:.1f} MB{aviso}')
+            c = t.get('costura')
+            costura = '' if not c else f'   empalme {c[0]:.1f} · nadir tapado'
+            print(f'  lote {t["n"]:>2}  {t["mb"]:.1f} MB  ->  {destino}  {mb:.1f} MB{costura}{aviso}')
 
     if args.escribir:
         conPano = {t['n'] for t in trabajos}

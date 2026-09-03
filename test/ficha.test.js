@@ -215,3 +215,26 @@ test('la ficha cerrada no se dibuja dentro de la página', () => {
   assert.match(css, /\.ficha:not\(\[open\]\)\s*\{[^}]*display:\s*none/,
     'falta .ficha:not([open]) { display: none } y la ficha cerrada se va a ver');
 });
+
+// Desde la vista 360 a pantalla completa TIENE que poderse cerrar.
+//
+// Antes no se podia: la X de arriba se esconde en ese modo y el unico boton
+// era «Salir», que solo achicaba y dejaba la ficha abierta. El visitante que
+// abria la vista grande quedaba sin salida — «no cierra cuando se ve la foto
+// 360», textual.
+//
+// Ahora la barra lleva dos, y son dos cosas distintas: «Volver» devuelve a la
+// ficha y la X cierra todo.
+test('la vista a pantalla completa tiene con qué cerrar, no solo con qué volver', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /class="ficha-reducir"/, 'falta el botón que vuelve a la ficha');
+  assert.match(html, /class="ficha-cerrar-todo"/, 'falta el botón que cierra desde la vista grande');
+
+  const css = readFileSync(new URL('../assets/css/estilos.css', import.meta.url), 'utf8');
+  assert.match(css, /\.ficha\.agrandada \.ficha-cerrar-todo[^}]*display:\s*block/,
+    'el botón de cerrar no se muestra a pantalla completa');
+
+  const js = readFileSync(new URL('../assets/js/ficha.js', import.meta.url), 'utf8');
+  assert.match(js, /ficha-cerrar-todo[\s\S]{0,160}dialogo\.close\(\)/,
+    'el botón de cerrar de la barra no cierra el diálogo');
+});

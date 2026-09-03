@@ -306,16 +306,27 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .ficha.agrandada .ficha-agrandar { display: none; }
 
 .ficha.agrandada .ficha-barra {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: .75rem 1rem;
+  display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .75rem;
   background: var(--verde-marca); color: #f3efe4;
-  font-size: .95rem;
+  font-size: .9rem;
 }
+/* Los dos de la barra, con 44 px de alto: es el minimo para un dedo y antes
+   median 37. */
+.ficha-barra-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ficha.agrandada .ficha-reducir {
   font: inherit; font-weight: 600; white-space: nowrap;
   color: var(--verde-marca); background: #f3efe4;
-  border: 0; border-radius: 999px; padding: .4rem 1rem; cursor: pointer;
+  border: 0; border-radius: 999px; padding: 0 1.1rem; height: 44px; cursor: pointer;
 }
+.ficha.agrandada .ficha-cerrar-todo {
+  font: inherit; font-size: 1.15rem; line-height: 1;
+  color: #f3efe4; background: none; border: 0;
+  width: 44px; height: 44px; padding: 0; border-radius: 8px; cursor: pointer;
+}
+/* Fuera de la vista grande la barra entera no existe, botones incluidos. */
+.ficha-cerrar-todo { display: none; }
+.ficha.agrandada .ficha-cerrar-todo { display: block; }
 .ficha.agrandada .ficha-cuerpo {
   flex: 1; min-height: 0; padding: 0; overflow: hidden;
   display: flex; flex-direction: column;

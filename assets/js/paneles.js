@@ -12,8 +12,8 @@
 // mismo dato que pinta el plano y la vitrina pública: números y estados
 // validados por `validarInventario`, sin texto libre de nadie.
 
-import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=f7cc8c35';
-import { validarInventario, precioDeLote } from './inventario.js?v=f7cc8c35';
+import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=85238aa1';
+import { validarInventario, precioDeLote } from './inventario.js?v=85238aa1';
 
 // Los rótulos largos vienen del nombre de la fila en la hoja («Disponible»,
 // «Gastado en obra»). En la fila de seis cifras no caben y además «Disponible»

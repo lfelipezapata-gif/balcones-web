@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote } from './inventario.js?v=f7cc8c35';
-import { pesos, metros } from './formato.js?v=f7cc8c35';
+import { validarInventario, precioDeLote } from './inventario.js?v=85238aa1';
+import { pesos, metros } from './formato.js?v=85238aa1';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -138,11 +138,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=f7cc8c35';
+    css.href = 'vendor/pannellum.css?v=85238aa1';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=f7cc8c35';
+    js.src = 'vendor/pannellum.js?v=85238aa1';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -228,7 +228,11 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     // Lo que se lee arriba en pantalla completa. Ahí no caben la tabla de
     // datos ni el precio en su fila: si no se resume acá, el que está mirando
     // la vista deja de ver cuánto vale, que es la mitad de la decisión.
-    barra.textContent = `${f.titulo} · ${f.areaTexto} · ${f.precioTexto}`;
+    // Solo el lote y el precio. Con el area tambien, en un telefono la barra
+    // no alcanza y lo que se corta es el final — o sea el precio, que es
+    // justo lo que no puede faltar mientras alguien mira su lote. El area
+    // esta a un toque de «Volver».
+    barra.textContent = `${f.titulo} · ${f.precioTexto}`;
     if (!config) return;
 
     try {
@@ -262,6 +266,11 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
 
   dialogo.querySelector('.ficha-agrandar').addEventListener('click', () => agrandar(true));
   dialogo.querySelector('.ficha-reducir').addEventListener('click', () => agrandar(false));
+  // Cerrar del todo desde la vista grande. No se usa un <form method="dialog">
+  // como la X de arriba: ese formulario vive dentro del cuerpo que se
+  // desplaza, y a pantalla completa el cuerpo esta ocupado por la vista.
+  dialogo.querySelector('.ficha-cerrar-todo')
+    .addEventListener('click', () => dialogo.close());
 
   // Con Esc, primero se sale de pantalla completa y solo después se cierra la
   // ficha. Cerrar de una en el primer Esc devuelve al visitante hasta el
