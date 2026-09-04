@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { construirFichaLote, configPano, WHATSAPP } from '../assets/js/ficha.js';
+import { construirFichaLote, configPano, loteDelEnlace, WHATSAPP } from '../assets/js/ficha.js';
 import { ESTADOS } from '../assets/js/inventario.js';
 import { existsSync, statSync } from 'node:fs';
 
@@ -237,4 +237,27 @@ test('la vista a pantalla completa tiene con qué cerrar, no solo con qué volve
   const js = readFileSync(new URL('../assets/js/ficha.js', import.meta.url), 'utf8');
   assert.match(js, /ficha-cerrar-todo[\s\S]{0,160}dialogo\.close\(\)/,
     'el botón de cerrar de la barra no cierra el diálogo');
+});
+
+// ── El enlace directo a un lote ─────────────────────────────────────────────
+// Para que un comprador pueda mandar «mirá mi lote» y se abra el suyo, no la
+// página genérica con catorce polígonos que el familiar tiene que buscar.
+
+test('el enlace #lote-3 abre el lote 3', () => {
+  assert.equal(loteDelEnlace('#lote-3', inv), 3);
+  assert.equal(loteDelEnlace('lote-14', inv), 14);
+});
+
+test('sin enlace, o con uno que no dice nada, no se abre nada', () => {
+  for (const h of ['', '#', '#lote-', '#otra-cosa', '#lote-abc', null, undefined]) {
+    assert.equal(loteDelEnlace(h, inv), null, `«${h}» no debería abrir ninguna ficha`);
+  }
+});
+
+// Un enlace a un lote que no existe abre la página normal, no revienta. Puede
+// llegar de un mensaje viejo reenviado, o de alguien que cambió el número a
+// mano por curiosidad.
+test('un lote que no existe no abre nada y no revienta', () => {
+  assert.equal(loteDelEnlace('#lote-99', inv), null);
+  assert.equal(loteDelEnlace('#lote-0', inv), null);
 });

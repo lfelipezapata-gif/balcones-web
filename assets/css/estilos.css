@@ -354,6 +354,14 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 }
 .ficha-mapa[hidden] { display: none; }
 .ficha-mapa::before { content: '◎ '; }
+
+/* La salida hacia los lotes en venta, en la ficha de uno colocado. */
+.ficha-hacia-disponibles {
+  display: block; margin-top: 1rem;
+  color: var(--verde); font-weight: 600; text-decoration: none;
+}
+.ficha-hacia-disponibles[hidden] { display: none; }
+.ficha-hacia-disponibles::after { content: ' →'; }
 .ficha.agrandada .ficha-mapa { display: none; }
 
 /* El boton es la ultima fila de la columna y no se desplaza nunca. Se probo

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Condominio Balcones — Santa Rosa de Osos</title>
 <meta name="description" content="Lotes de casa-finca en Santa Rosa de Osos. Escritura individual, agua potable del acueducto urbano, energía y vías.">
-<link rel="stylesheet" href="assets/css/estilos.css?v=85238aa1">
+<link rel="stylesheet" href="assets/css/estilos.css?v=f9e76070">
 <link rel="icon" href="img/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
@@ -64,6 +64,10 @@
       <div><dt>Ubicación</dt><dd class="ficha-sector"></dd></div>
     </dl>
     <a class="ficha-mapa" href="" target="_blank" rel="noopener" hidden>Ver dónde queda en el mapa</a>
+    <!-- Solo en un lote colocado. Quien llega por el enlace que le mandó un
+         comprador cae en un lote que no está a la venta; sin esto no tiene a
+         dónde seguir. -->
+    <a class="ficha-hacia-disponibles" href="#disponibles" hidden></a>
   </div>
   <a class="boton ficha-whatsapp" href="" hidden>Preguntar por este lote</a>
 </dialog>
@@ -102,18 +106,18 @@
 </footer>
 
 <script type="module">
-  import { construirVistaVitrina } from './assets/js/vitrina.js?v=85238aa1';
-  import { pintarMapa } from './assets/js/mapa.js?v=85238aa1';
-  import { montarFicha } from './assets/js/ficha.js?v=85238aa1';
+  import { construirVistaVitrina } from './assets/js/vitrina.js?v=f9e76070';
+  import { pintarMapa } from './assets/js/mapa.js?v=f9e76070';
+  import { montarFicha, loteDelEnlace } from './assets/js/ficha.js?v=f9e76070';
 
-  const inv = await (await fetch('data/lotes.json?v=85238aa1')).json();
+  const inv = await (await fetch('data/lotes.json?v=f9e76070')).json();
   const v = construirVistaVitrina(inv);
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = document.getElementById('mapa');
-  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=85238aa1')).text();
+  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=f9e76070')).text();
   const vistaMapa = pintarMapa(caja.querySelector('svg'), inv);
 
   // La casilla de «Reservado» de la leyenda sale del dato, no de una decisión
@@ -137,11 +141,14 @@
       ${t.tiene360 ? '<p class="marca360">Ver la vista en 360°</p>' : ''}
     </article>`).join('');
 
-  montarFicha(inv, {
-    svg: caja.querySelector('svg'),
-    tarjetas,
-    dialogo: document.getElementById('ficha')
-  });
+  const dialogo = document.getElementById('ficha');
+  montarFicha(inv, { svg: caja.querySelector('svg'), tarjetas, dialogo });
+
+  // Si el enlace nombra un lote —«…/#lote-3»— se abre ese. Es lo que deja que
+  // un comprador mande «mirá mi lote» y al familiar se le abra EL SUYO, en vez
+  // de la página con catorce polígonos donde tendría que ponerse a buscar.
+  const delEnlace = loteDelEnlace(location.hash, inv);
+  if (delEnlace) dialogo.abrirLote(delEnlace);
 </script>
 
 </body>

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Balcones — Tablero de socios</title>
-<link rel="stylesheet" href="../assets/css/estilos.css?v=85238aa1">
+<link rel="stylesheet" href="../assets/css/estilos.css?v=f9e76070">
 <link rel="icon" href="../img/favicon-32.png" sizes="32x32">
 <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
@@ -83,13 +83,13 @@
 </main>
 
 <script type="module">
-import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=85238aa1';
-import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=85238aa1';
+import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=f9e76070';
+import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=f9e76070';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   construirTotalesLotes, construirVistaCaja, construirDetalleCifra
-} from '../assets/js/paneles.js?v=85238aa1';
-import { pintarMapa } from '../assets/js/mapa.js?v=85238aa1';
+} from '../assets/js/paneles.js?v=f9e76070';
+import { pintarMapa } from '../assets/js/mapa.js?v=f9e76070';
 
 const $ = (id) => document.getElementById(id);
 
@@ -161,7 +161,7 @@ function pintarFicha(f) {
 // entre el plano y la cartera. Va aparte del resto a propósito: si el plano
 // revienta, las cifras, los gastos y los avisos no tienen por qué caerse con él.
 async function montarPlano(vista) {
-  const inv = await (await fetch('../data/lotes.json?v=85238aa1')).json();
+  const inv = await (await fetch('../data/lotes.json?v=f9e76070')).json();
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
@@ -586,7 +586,7 @@ async function cargar(credencial) {
     const i = Number(boton.dataset.cifra);
     if (cifraAbierta === i) { cerrarDetalle(); return; }
 
-    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=85238aa1')).json();
+    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=f9e76070')).json();
     const d = construirDetalleCifra(cifras[i].clave, v, inventario);
     if (!d) return;
 

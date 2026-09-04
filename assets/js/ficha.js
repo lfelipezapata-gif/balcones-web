@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote } from './inventario.js?v=85238aa1';
-import { pesos, metros } from './formato.js?v=85238aa1';
+import { validarInventario, precioDeLote } from './inventario.js?v=f9e76070';
+import { pesos, metros } from './formato.js?v=f9e76070';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -81,6 +81,22 @@ export function construirFichaLote(json, n) {
   };
 }
 
+// De qué lote habla un enlace como «…/#lote-3».
+//
+// Es lo que deja que un comprador mande «mirá mi lote» y se abra EL SUYO, en
+// vez de la página con catorce polígonos donde el familiar tiene que ponerse
+// a buscar. Sin esto, mandar el link no sirve para lo que se quiere.
+//
+// Devuelve null ante cualquier cosa rara —un enlace viejo reenviado, un
+// número cambiado a mano por curiosidad, un lote que ya no existe— y entonces
+// la página abre normal. Un enlace roto no puede dejar a nadie en blanco.
+export function loteDelEnlace(hash, json) {
+  const m = /^#?lote-(\d{1,3})$/.exec(String(hash ?? '').trim());
+  if (!m) return null;
+  const n = Number(m[1]);
+  return json.lotes.some(l => l.n === n) ? n : null;
+}
+
 // El visor 360.
 //
 // El corte de arriba (`maxPitch`) es lo importante. El gimbal del dron no
@@ -138,11 +154,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=85238aa1';
+    css.href = 'vendor/pannellum.css?v=f9e76070';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=85238aa1';
+    js.src = 'vendor/pannellum.js?v=f9e76070';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -186,6 +202,21 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
       alMapa.hidden = true;
     }
 
+    // Salida hacia los que sí están en venta. Solo en un lote colocado: quien
+    // llega por el enlace que le mandó un comprador cae en un lote con dueño y
+    // sin esto no tiene a dónde seguir. Es justo el visitante que se puede
+    // antojar, y hoy se quedaba sin camino.
+    const haciaDisponibles = dialogo.querySelector('.ficha-hacia-disponibles');
+    const quedan = json.lotes.filter(l => l.estado === 'disponible').length;
+    if (!f.disponible && quedan > 0) {
+      haciaDisponibles.textContent = quedan === 1
+        ? 'Queda 1 lote en venta — verlo'
+        : `Quedan ${quedan} lotes en venta — verlos`;
+      haciaDisponibles.hidden = false;
+    } else {
+      haciaDisponibles.hidden = true;
+    }
+
     const boton = dialogo.querySelector('.ficha-whatsapp');
     if (f.whatsapp) {
       boton.href = f.whatsapp;
@@ -195,9 +226,18 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
       boton.hidden = true;
     }
 
+    // La URL pasa a nombrar el lote abierto, para que se pueda copiar y
+    // mandar. `replaceState` y no `pushState`: si cada lote dejara una entrada
+    // en el historial, salir de la ficha con el botón de atrás obligaría a
+    // pulsarlo tantas veces como lotes se hayan mirado.
+    if (history.replaceState) history.replaceState(null, '', `#lote-${f.n}`);
+
     dialogo.showModal();
     montarPano(f);
   }
+
+  // Se expone para que index.html pueda abrir el lote que pida el enlace.
+  dialogo.abrirLote = abrir;
 
   // Un visor de Pannellum se queda con un contexto de WebGL. El navegador
   // permite unos pocos a la vez, así que abrir siete lotes seguidos sin
@@ -295,6 +335,11 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     if (dialogo.open) return;
     soltarPano();
     dialogo.classList.remove('agrandada');
+    // Se le quita el lote a la URL al cerrar, si no queda apuntando a una
+    // ficha que ya nadie está viendo y recargar la vuelve a abrir sola.
+    if (history.replaceState) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
   });
   observador.observe(dialogo, { attributes: true, attributeFilter: ['open'] });
 

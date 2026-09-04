@@ -8,7 +8,8 @@
       "area": 2754,
       "estado": "vendido",
       "lat": 6.648535,
-      "lon": -75.445462
+      "lon": -75.445462,
+      "pano": "img/pano/lote-01.jpg"
     },
     {
       "n": 2,
@@ -16,7 +17,8 @@
       "area": 2746,
       "estado": "especie",
       "lat": 6.648873,
-      "lon": -75.445389
+      "lon": -75.445389,
+      "pano": "img/pano/lote-02.jpg"
     },
     {
       "n": 3,
@@ -24,7 +26,8 @@
       "area": 2761,
       "estado": "vendido",
       "lat": 6.649197,
-      "lon": -75.445383
+      "lon": -75.445383,
+      "pano": "img/pano/lote-03.jpg"
     },
     {
       "n": 4,
@@ -32,7 +35,8 @@
       "area": 2752,
       "estado": "vendido",
       "lat": 6.649499,
-      "lon": -75.445495
+      "lon": -75.445495,
+      "pano": "img/pano/lote-04.jpg"
     },
     {
       "n": 5,
@@ -40,7 +44,8 @@
       "area": 2200,
       "estado": "vendido",
       "lat": 6.649828,
-      "lon": -75.445349
+      "lon": -75.445349,
+      "pano": "img/pano/lote-05.jpg"
     },
     {
       "n": 6,
@@ -84,7 +89,8 @@
       "area": 2040,
       "estado": "vendido",
       "lat": 6.651501,
-      "lon": -75.445985
+      "lon": -75.445985,
+      "pano": "img/pano/lote-10.jpg"
     },
     {
       "n": 11,
@@ -119,7 +125,8 @@
       "area": 3000,
       "estado": "vendido",
       "lat": 6.65311,
-      "lon": -75.446887
+      "lon": -75.446887,
+      "pano": "img/pano/lote-14.jpg"
     }
   ]
 }
