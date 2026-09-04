@@ -223,8 +223,15 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
    `display: flex` para hacerlo columna, esa regla quedo pisada y la ficha
    CERRADA se dibujaba dentro de la pagina: una tarjeta vacia con «Area /
    Precio / Valor / Ubicacion» sin valores y una X, en mitad del listado.
-   Aparecia justo al cerrar el visor 360, que es cuando se noto. */
-.ficha:not([open]) { display: none; }
+   Aparecia justo al cerrar el visor 360, que es cuando se noto.
+
+   ⚠️ Y EL `dialog` DE ADELANTE TAMPOCO SE PUEDE QUITAR, por lo que avisa el
+   encabezado de esta sección: este archivo lo comparten la vitrina y el tablero
+   de socios, y el tablero tiene su PROPIA ficha de lote, que es un <div
+   class="ficha"> y nunca lleva [open]. Sin `dialog.`, esta regla la escondía
+   también: el socio pulsaba un lote en el plano y no pasaba nada. Estuvo así
+   del 4-sep-2026 hasta que se notó ese mismo día. */
+dialog.ficha:not([open]) { display: none; }
 
 .ficha::backdrop { background: rgba(2, 24, 12, .55); }
 .ficha-cerrar-caja { float: right; margin: -.5rem -.5rem 0 0; }
@@ -750,6 +757,29 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .tablero .mapa .lote[data-seleccionado] { fill: var(--dorado); stroke: #fff; }
 .tablero .mapa .rotulo-lote[data-seleccionado] .numero { fill: #3b2c06; }
 .tablero .mapa .rotulo-lote[data-seleccionado] .area { fill: #5e4a0f; }
+
+/* Las mismas tres cosas sobre el plano aéreo, que es el que usa el tablero
+   desde el 4-sep-2026. Debajo de los lotes hay una ORTOFOTO, así que los
+   rellenos sólidos de arriba la taparían: el socio perdería justamente lo que
+   el plano aéreo vino a darle —ver el terreno— y le quedarían unos polígonos
+   de colores planos, que es el plano esquemático con más pasos.
+
+   Van DESPUÉS y con la misma especificidad que las de `.mapa` a propósito:
+   ambas clases viven en el mismo <svg>, así que empatan y decide el orden.
+   Moverlas más arriba las apaga sin que nada falle. */
+.tablero .aereo .lote[data-atenuado]:not([data-seleccionado]) { fill: rgba(38, 44, 36, .62); }
+.tablero .aereo .lote[data-atenuado][data-estado="disponible"]:not([data-seleccionado]) { fill: rgba(47, 107, 63, .45); }
+.tablero .aereo .lote[data-seleccionado] {
+  fill: rgba(200, 161, 62, .68);
+  stroke: #fff;
+  stroke-width: 5;
+}
+.tablero .aereo .rotulo-lote[data-seleccionado] .numero { fill: #fff; }
+.tablero .aereo .rotulo-lote[data-seleccionado] .area { fill: rgba(255, 255, 255, .92); }
+/* El rótulo del lote apagado: blanco a media tinta en vez del gris del
+   esquemático, que sobre la foto no se lee. */
+.tablero .aereo .rotulo-lote[data-atenuado]:not([data-seleccionado]) .numero { fill: rgba(255, 255, 255, .5); }
+.tablero .aereo .rotulo-lote[data-atenuado]:not([data-seleccionado]) .area { fill: rgba(255, 255, 255, .4); }
 .tablero .plano .leyenda { margin: .85rem 0 0; }
 .tablero .leyenda .muestra[data-estado="seleccionado"] {
   background: var(--dorado);
@@ -809,6 +839,33 @@ section, header, footer { padding: 2rem 1.25rem; max-width: 900px; margin: 0 aut
 .tablero .barra-progreso { height: 6px; border-radius: 999px; background: #eceae4; overflow: hidden; }
 .tablero .barra-progreso > span { display: block; height: 100%; background: var(--verde); }
 .tablero .progreso-texto { margin: .35rem 0 0; font-size: .82rem; color: #7a7a72; }
+
+/* Las fechas de pago. Debajo de la barra y antes de la próxima cuota, que es el
+   orden en que se lee la plata de un lote: cuánto lleva, cuándo lo puso, qué
+   sigue. Las cifras alineadas a la derecha y con el mismo ancho por dígito para
+   poder compararlas de un vistazo, igual que en los listados de arriba. */
+.tablero .pagos { margin-top: .95rem; }
+.tablero .pagos .rot {
+  display: block;
+  margin: 0 0 .35rem;
+  font-size: .66rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #7a7a72;
+}
+.tablero .pagos-lista { list-style: none; margin: 0; padding: 0; }
+.tablero .pagos-lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: .3rem 0;
+  border-bottom: 1px solid #f0ede6;
+  font-size: .88rem;
+}
+.tablero .pagos-lista li:last-child { border-bottom: 0; }
+.tablero .pago-fecha { color: #6b6b6b; font-variant-numeric: tabular-nums; }
+.tablero .pago-valor { font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* El calendario del saldo, al pie de la ficha. En ámbar cuando el texto habla
    de algo vencido: es el único aviso de mora que hay: la hoja la escribe en

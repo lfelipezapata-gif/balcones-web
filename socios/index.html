@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Balcones — Tablero de socios</title>
-<link rel="stylesheet" href="../assets/css/estilos.css?v=f9e76070">
+<link rel="stylesheet" href="../assets/css/estilos.css?v=5179f790">
 <link rel="icon" href="../img/favicon-32.png" sizes="32x32">
 <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
@@ -83,13 +83,13 @@
 </main>
 
 <script type="module">
-import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=f9e76070';
-import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=f9e76070';
+import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=5179f790';
+import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=5179f790';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   construirTotalesLotes, construirVistaCaja, construirDetalleCifra
-} from '../assets/js/paneles.js?v=f9e76070';
-import { pintarMapa } from '../assets/js/mapa.js?v=f9e76070';
+} from '../assets/js/paneles.js?v=5179f790';
+import { pintarMapa } from '../assets/js/mapa.js?v=5179f790';
 
 const $ = (id) => document.getElementById(id);
 
@@ -142,6 +142,18 @@ function pintarFicha(f) {
          <p class="progreso-texto">${f.progreso.texto}</p>
        </div>`
     : '';
+  // Las fechas de pago. Todo lo de `f.pagos` viene de la vista ya escapado, y
+  // la fecha ausente ya llegó como raya desde paneles.js: acá no se decide nada.
+  const pagos = f.pagos.length
+    ? `<div class="pagos">
+         <p class="rot">Pagos recibidos</p>
+         <ul class="pagos-lista">
+           ${f.pagos.map(p => `
+             <li><span class="pago-fecha">${p.fecha}</span>
+                 <span class="pago-valor">${p.valor}</span></li>`).join('')}
+         </ul>
+       </div>`
+    : '';
   const calendario = f.calendario
     ? `<p class="calendario${f.calendario.vencido ? ' vencido' : ''}">
          <span class="rot">Próxima cuota</span>${f.calendario.texto}</p>`
@@ -154,21 +166,38 @@ function pintarFicha(f) {
       <span class="pildora" data-estado="${f.estado}">${f.etiqueta}</span>
     </p>
     <dl class="ficha-datos">${filas}</dl>
-    ${progreso}${calendario}${nota}`;
+    ${progreso}${pagos}${calendario}${nota}`;
 }
 
 // Monta el plano, lo deja clicable y devuelve los avisos de lo que no cuadra
 // entre el plano y la cartera. Va aparte del resto a propósito: si el plano
 // revienta, las cifras, los gastos y los avisos no tienen por qué caerse con él.
 async function montarPlano(vista) {
-  const inv = await (await fetch('../data/lotes.json?v=f9e76070')).json();
+  const inv = await (await fetch('../data/lotes.json?v=5179f790')).json();
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = $('mapa');
-  caja.innerHTML = await (await fetch('../img/mapa.svg')).text();
+  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=5179f790')).text();
   const svg = caja.querySelector('svg');
+
+  // Es el MISMO archivo que usa la vitrina pública, a propósito: dos planos
+  // separados se desincronizan el día que se mueve un lindero, y el socio y el
+  // comprador terminan viendo terrenos distintos.
+  //
+  // El precio de compartirlo es esto: su <image> apunta a `img/ortofoto.jpg`
+  // relativo al DOCUMENTO, y este documento vive en /socios/. Sin corregirlo la
+  // foto se pide a /socios/img/ y da 404 — los lotes quedarían flotando sobre
+  // un rectángulo en blanco, que se ve como un plano roto y no como una imagen
+  // que falta. Se corrige la ruta acá y el archivo compartido no se toca.
+  for (const img of svg.querySelectorAll('image')) {
+    for (const attr of ['href', 'xlink:href']) {
+      const v = img.getAttribute(attr);
+      if (v && v.startsWith('img/')) img.setAttribute(attr, `../${v}`);
+    }
+  }
+
   pintarMapa(svg, inv);
 
   const { fichas, inicial, avisos } = construirVistaLotes(vista, inv);
@@ -586,7 +615,7 @@ async function cargar(credencial) {
     const i = Number(boton.dataset.cifra);
     if (cifraAbierta === i) { cerrarDetalle(); return; }
 
-    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=f9e76070')).json();
+    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=5179f790')).json();
     const d = construirDetalleCifra(cifras[i].clave, v, inventario);
     if (!d) return;
 

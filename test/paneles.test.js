@@ -1466,3 +1466,66 @@ test('todos los estados del inventario caen en algún listado del tablero', () =
       `el estado «${estado}» no aparece en ningún listado: el lote se pierde del tablero`);
   }
 });
+
+// ---- las fechas de pago en la ficha del lote ----------------------------
+
+test('la ficha de un lote colocado lista sus pagos con la fecha', () => {
+  // La fecha sale tal como la manda el worker, sin reformatear acá: con datos
+  // reales llega «dd/mm/aaaa», y este tablero de prueba la trae en ISO.
+  const f = fichaDe(1);
+  assert.deepEqual(f.pagos, [{ fecha: '2026-08-25', valor: '$50.000.000', medio: 'Transferencia' }]);
+});
+
+test('los pagos de la ficha van en orden de calendario, no alfabético', () => {
+  const conVarios = {
+    ...TABLERO,
+    cartera: [{
+      ...TABLERO.cartera[0],
+      abonos: [
+        { fecha: '05/09/2026', valor: 20000000, medio: 'Transferencia' },
+        { fecha: '19/08/2026', valor: 30000000, medio: 'Transferencia' }
+      ]
+    }]
+  };
+  const f = construirVistaLotes(vistaDe(conVarios), INV).fichas.find(x => x.n === 1);
+  assert.deepEqual(f.pagos.map(p => p.fecha), ['19/08/2026', '05/09/2026']);
+});
+
+test('el pago sin fecha va al final y con raya, no con una fecha inventada', () => {
+  const conSinFecha = {
+    ...TABLERO,
+    cartera: [{
+      ...TABLERO.cartera[0],
+      abonos: [
+        { fecha: '', valor: 200000000, medio: 'Sin desglose' },
+        { fecha: '19/08/2026', valor: 30000000, medio: 'Transferencia' }
+      ]
+    }]
+  };
+  const f = construirVistaLotes(vistaDe(conSinFecha), INV).fichas.find(x => x.n === 1);
+  assert.deepEqual(f.pagos.map(p => p.fecha), ['19/08/2026', '—']);
+  assert.deepEqual(f.pagos.map(p => p.valor), ['$30.000.000', '$200.000.000']);
+});
+
+test('toda ficha trae pagos como arreglo, aunque no tenga ninguno', () => {
+  // La vista hace `f.pagos.length` sin guardas. Un null acá la tumba entera, y
+  // con ella el plano: cero pagos no es lo mismo que «pagos desconocidos».
+  for (const f of construirVistaLotes(vistaDe(), INV).fichas) {
+    assert.ok(Array.isArray(f.pagos), `el lote ${f.n} trajo pagos que no es arreglo`);
+  }
+  assert.deepEqual(fichaDe(6).pagos, [], 'un lote a la venta no tiene pagos');
+  assert.deepEqual(fichaDe(5).pagos, [], 'el lote 5 del tablero de prueba no trae abonos');
+  assert.deepEqual(fichaDe(3).pagos, [], 'y el que el plano da por vendido sin fila en la cartera, tampoco');
+});
+
+test('el texto de un pago sale escapado, no interpretado', () => {
+  const CARGA = `<img src=x onerror=alert(1)>`;
+  const envenenado = {
+    ...TABLERO,
+    cartera: [{ ...TABLERO.cartera[0], abonos: [{ fecha: CARGA, valor: 1000, medio: CARGA }] }]
+  };
+  const f = construirVistaLotes(vistaDe(envenenado), INV).fichas.find(x => x.n === 1);
+  for (const t of [f.pagos[0].fecha, f.pagos[0].medio]) {
+    assert.doesNotMatch(t, /<img/, `salió sin escapar: ${t}`);
+  }
+});

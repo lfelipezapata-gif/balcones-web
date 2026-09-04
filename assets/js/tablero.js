@@ -1,4 +1,4 @@
-import { pesos, porcentaje } from './formato.js?v=f9e76070';
+import { pesos, porcentaje } from './formato.js?v=5179f790';
 
 const ETIQUETAS = [
   ['vendido', 'Vendido'], ['abonado', 'Abonado'], ['porCobrar', 'Por cobrar'],

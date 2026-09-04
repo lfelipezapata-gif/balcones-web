@@ -12,8 +12,8 @@
 // mismo dato que pinta el plano y la vitrina pública: números y estados
 // validados por `validarInventario`, sin texto libre de nadie.
 
-import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=f9e76070';
-import { validarInventario, precioDeLote } from './inventario.js?v=f9e76070';
+import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=5179f790';
+import { validarInventario, precioDeLote } from './inventario.js?v=5179f790';
 
 // Los rótulos largos vienen del nombre de la fila en la hoja («Disponible»,
 // «Gastado en obra»). En la fila de seis cifras no caben y además «Disponible»
@@ -351,6 +351,9 @@ function fichaBase(lote) {
     etiqueta: ETIQUETA_ESTADO[lote.estado] ?? lote.estado,
     filas: [],
     progreso: null,
+    // Siempre un arreglo, nunca null: la vista pregunta `f.pagos.length` sin
+    // guardas, y un lote sin cartera tiene cero pagos, no «pagos desconocidos».
+    pagos: [],
     calendario: null,
     nota: null
   };
@@ -382,6 +385,24 @@ function fichaConCartera(lote, c) {
     etiqueta: ETIQUETA_ESTADO.vendido,
     filas,
     progreso: pct === null ? null : { porcentaje: pct, texto: `${pct} % pagado` },
+    // Cuándo entró cada pago. El «Abonado» de arriba dice cuánto lleva puesto;
+    // esto dice en cuántas veces y con qué ritmo, que es otra cosa: $130
+    // millones en un solo pago y $130 millones en seis cuotas son dos
+    // compradores distintos.
+    //
+    // Se ordena acá aunque el worker ya venga ordenado: es la única lista de la
+    // ficha y no puede depender de que el orden llegue bien desde el otro lado.
+    // Los abonos sin fecha —los que se registraron como un solo monto antes de
+    // llevarse el detalle— van al final con una raya, no con una fecha inventada.
+    pagos: [...(c.abonos ?? [])]
+      .map(a => ({ ...a, orden: ordenDeFecha(a.fecha) }))
+      .sort((x, y) => {
+        if (x.orden === null && y.orden === null) return 0;
+        if (x.orden === null) return 1;
+        if (y.orden === null) return -1;
+        return x.orden - y.orden;
+      })
+      .map(a => ({ fecha: a.fecha || '—', valor: a.valorTexto, medio: a.medio || '' })),
     calendario: {
       texto: c.proximaCuotaTexto,
       vencido: mencionaVencido(c.proximaCuotaTexto)
