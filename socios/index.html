@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Balcones — Tablero de socios</title>
-<link rel="stylesheet" href="../assets/css/estilos.css?v=5179f790">
+<link rel="stylesheet" href="../assets/css/estilos.css?v=5ee135b9">
 <link rel="icon" href="../img/favicon-32.png" sizes="32x32">
 <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
@@ -25,6 +25,20 @@
   <p>Entrá con la cuenta de Google con la que te compartieron el tablero.</p>
   <div id="boton-google"></div>
   <p id="error" class="error" hidden></p>
+
+  <!-- Este aviso se muestra SIEMPRE, no solo cuando la detección del webview
+       acierta. La detección por user agent falla en silencio cada vez que una
+       app cambia el suyo, y el costo de que sobre es cero: el costo de que
+       falte fueron ocho días persiguiendo el caso de Arequipe como si fuera
+       la lista de correos. Cuando sí se detecta, el bloque se destaca. -->
+  <div id="aviso-webview" class="aviso-webview">
+    <p><strong>Si Google te dice «400. That’s an error», no es tu cuenta.</strong></p>
+    <p>Pasa cuando abrís el enlace dentro de WhatsApp. Google no deja entrar desde ahí. Abrilo en tu navegador y funciona:</p>
+    <ul>
+      <li><strong>iPhone:</strong> los <strong>•••</strong> de abajo a la derecha → <em>Abrir en Safari</em>.</li>
+      <li><strong>Android:</strong> los <strong>⋮</strong> de arriba a la derecha → <em>Abrir en el navegador</em>.</li>
+    </ul>
+  </div>
 </section>
 
 <main id="contenido" hidden>
@@ -83,13 +97,13 @@
 </main>
 
 <script type="module">
-import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=5179f790';
-import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=5179f790';
+import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=5ee135b9';
+import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=5ee135b9';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   construirTotalesLotes, construirVistaCaja, construirDetalleCifra
-} from '../assets/js/paneles.js?v=5179f790';
-import { pintarMapa } from '../assets/js/mapa.js?v=5179f790';
+} from '../assets/js/paneles.js?v=5ee135b9';
+import { pintarMapa } from '../assets/js/mapa.js?v=5ee135b9';
 
 const $ = (id) => document.getElementById(id);
 
@@ -173,13 +187,13 @@ function pintarFicha(f) {
 // entre el plano y la cartera. Va aparte del resto a propósito: si el plano
 // revienta, las cifras, los gastos y los avisos no tienen por qué caerse con él.
 async function montarPlano(vista) {
-  const inv = await (await fetch('../data/lotes.json?v=5179f790')).json();
+  const inv = await (await fetch('../data/lotes.json?v=5ee135b9')).json();
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = $('mapa');
-  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=5179f790')).text();
+  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=5ee135b9')).text();
   const svg = caja.querySelector('svg');
 
   // Es el MISMO archivo que usa la vitrina pública, a propósito: dos planos
@@ -615,7 +629,7 @@ async function cargar(credencial) {
     const i = Number(boton.dataset.cifra);
     if (cifraAbierta === i) { cerrarDetalle(); return; }
 
-    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=5179f790')).json();
+    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=5ee135b9')).json();
     const d = construirDetalleCifra(cifras[i].clave, v, inventario);
     if (!d) return;
 
@@ -655,7 +669,30 @@ async function cargar(credencial) {
     : '';
 }
 
+// Google no completa su login dentro de un navegador embebido —el de WhatsApp,
+// el de Instagram, el de Facebook—: devuelve una pantalla suya que dice
+// «400. That's an error» y el socio se queda sin ninguna explicación. Pasó dos
+// veces: Arequipe el 4-sep-2026 y Sergio el 12-sep, los dos abriendo el enlace
+// del grupo desde el teléfono. Las dos veces se persiguió como si fuera la
+// lista de correos autorizados, y el login ni siquiera llega a consultarla.
+//
+// La detección es best-effort y por eso NO decide si el aviso existe, solo si
+// se destaca: el texto está siempre en la página.
+function enNavegadorEmbebido() {
+  const ua = navigator.userAgent || '';
+  // Android marca sus WebView con el token "; wv)".
+  if (/;\s*wv\)/.test(ua)) return true;
+  // Apps que se anuncian por nombre.
+  if (/FBAN|FBAV|FB_IAB|Instagram|Line\//i.test(ua)) return true;
+  // En iOS un navegador de verdad se identifica con Safari/, CriOS/ o FxiOS/.
+  // El WKWebView de una app no lleva ninguno de los tres.
+  if (/iPhone|iPad|iPod/.test(ua) && !/Safari\/|CriOS\/|FxiOS\/|EdgiOS\//.test(ua)) return true;
+  return false;
+}
+
 window.onload = () => {
+  if (enNavegadorEmbebido()) $('aviso-webview').classList.add('destacado');
+
   // Si el script de accounts.google.com no cargó (sin conexión al momento
   // de abrir la página, red bloqueada, origen no autorizado), "google" no
   // existe: sin este chequeo era un ReferenceError silencioso y el botón

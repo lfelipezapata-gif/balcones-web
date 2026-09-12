@@ -1254,3 +1254,20 @@ dialog.ficha:not([open]) { display: none; }
 /* --- la pantalla de entrada -------------------------------------------- */
 .tablero #entrada { max-width: 520px; text-align: center; }
 .tablero #entrada #boton-google { display: flex; justify-content: center; }
+
+/* El aviso del navegador embebido. Discreto por defecto —está siempre, y no
+   puede competir con el botón de entrar—; se destaca solo cuando la detección
+   del webview acierta. Va alineado a la izquierda porque son instrucciones con
+   viñetas y centradas no se leen. */
+.tablero .aviso-webview {
+  margin-top: 1.75rem; text-align: left;
+  color: #6b6b6b; font-size: .9rem; line-height: 1.5;
+}
+.tablero .aviso-webview p { margin: 0 0 .4rem; }
+.tablero .aviso-webview ul { margin: 0; padding-left: 1.1rem; }
+.tablero .aviso-webview li { margin-bottom: .25rem; }
+.tablero .aviso-webview.destacado {
+  background: #fff4e0; border: 1px solid #e8c98a;
+  padding: .9rem; border-radius: 8px;
+  color: inherit; font-size: 1rem;
+}
