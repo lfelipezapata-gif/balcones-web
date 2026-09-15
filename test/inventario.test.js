@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import {
-  validarInventario, precioDeLote, resumenInventario, lotesDisponibles, ESTADOS
+  validarInventario, validarCasa, precioDeLote, resumenInventario, lotesDisponibles, ESTADOS
 } from '../assets/js/inventario.js';
 
 const inv = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url)));
@@ -139,6 +139,25 @@ test('el manifiesto de anteproyecto que nombra el inventario existe', () => {
     if (!l.casa) continue;
     assert.ok(existsSync(new URL('../' + l.casa, import.meta.url)),
       `el lote ${l.n} apunta a ${l.casa} y ese archivo no está en el repositorio`);
+  }
+});
+
+// Que el manifiesto exista no basta: adentro nombra un video, un póster y una
+// docena de imágenes. Cada anteproyecto nuevo son trece archivos que se copian a
+// mano, y una ruta mal escrita no rompe nada visible — la galería se salta la
+// foto y el video no arranca, sin error en pantalla. Acá se revientan las dos
+// cosas a la vez: que el manifiesto pase su propia validación y que todo lo que
+// nombra esté de verdad en el repositorio.
+test('cada anteproyecto es válido y todos sus archivos están subidos', () => {
+  const manifiestos = inv.lotes.filter((l) => l.casa);
+  assert.ok(manifiestos.length > 0, 'debería haber al menos un anteproyecto publicado');
+  for (const l of manifiestos) {
+    const casa = JSON.parse(readFileSync(new URL('../' + l.casa, import.meta.url)));
+    assert.doesNotThrow(() => validarCasa(casa), `el manifiesto del lote ${l.n} no es válido`);
+    for (const ruta of [casa.video, casa.poster, ...casa.imagenes.map(([src]) => src)]) {
+      assert.ok(existsSync(new URL('../' + ruta, import.meta.url)),
+        `el anteproyecto del lote ${l.n} nombra ${ruta} y ese archivo no está en el repositorio`);
+    }
   }
 });
 
