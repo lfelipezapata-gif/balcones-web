@@ -41,7 +41,14 @@ RAIZ = Path(__file__).resolve().parent.parent
 # ortofoto entra porque lo referencia el SVG del plano; las panoramicas no,
 # porque solo se piden al abrir una ficha y su nombre cambia cuando cambia el
 # lote.
-VERSIONADOS = [
+#
+# Los manifiestos de anteproyecto van POR PATRON, no uno por uno. Estaban a
+# mano y el 15-sep-2026 se publico `data/casa-lote-7.json` sin agregarlo a esta
+# lista: el token no se movio, y quien ya hubiera abierto esa ficha ese dia
+# seguia viendo el manifiesto viejo. `ficha.js` los pide con el token pegado,
+# asi que basta con que su contenido pese en el hash — no hace falta que el
+# nombre aparezca escrito en ninguna parte.
+FIJOS = [
     "assets/css/estilos.css",
     "assets/js/config.js",
     "assets/js/ficha.js",
@@ -51,13 +58,16 @@ VERSIONADOS = [
     "assets/js/paneles.js",
     "assets/js/tablero.js",
     "assets/js/vitrina.js",
-    "data/casa-lote-6.json",
     "data/lotes.json",
     "img/mapa-aereo.svg",
     "img/ortofoto.jpg",
     "vendor/pannellum.css",
     "vendor/pannellum.js",
 ]
+MANIFIESTOS = sorted(
+    p.relative_to(RAIZ).as_posix() for p in (RAIZ / "data").glob("casa-lote-*.json")
+)
+VERSIONADOS = FIJOS + MANIFIESTOS
 
 # Donde se reescriben las referencias.
 ESCRIBIR_EN = ["index.html", "img/mapa-aereo.svg",
@@ -113,7 +123,13 @@ def referencias(texto, t):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--escribir", action="store_true")
+    ap.add_argument("--lista", action="store_true",
+                    help="imprime que archivos pesan en el token, uno por linea")
     args = ap.parse_args()
+
+    if args.lista:
+        print("\n".join(VERSIONADOS))
+        return
 
     t = token()
     pendientes = []

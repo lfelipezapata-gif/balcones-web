@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=2abd276d';
-import { pesos, metros } from './formato.js?v=2abd276d';
+import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=3148b66a';
+import { pesos, metros } from './formato.js?v=3148b66a';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -195,11 +195,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=2abd276d';
+    css.href = 'vendor/pannellum.css?v=3148b66a';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=2abd276d';
+    js.src = 'vendor/pannellum.js?v=3148b66a';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
