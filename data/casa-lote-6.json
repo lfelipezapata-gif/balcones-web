@@ -1,0 +1,76 @@
+{
+  "titulo": "Qué se puede construir acá",
+  "entrada": "Una casa de tres niveles que baja escalonada con el terreno, en vez de pelearse con él.",
+  "aviso": "El lote se vende SIN construcción. Esto es un anteproyecto: una propuesta de lo que cabe acá, no una casa construida ni una obra contratada.",
+  "video": "video/casa-lote-6.mp4",
+  "poster": "img/casa-lote-6/poster.jpg",
+  "duracion": "65 segundos",
+  "datos": [
+    [
+      "270 m²",
+      "cubiertos, en tres niveles"
+    ],
+    [
+      "60 m²",
+      "de terrazas entre volúmenes"
+    ],
+    [
+      "15 × 22 m",
+      "huella sobre el talud"
+    ],
+    [
+      "11 %",
+      "de ocupación del lote"
+    ]
+  ],
+  "imagenes": [
+    [
+      "img/casa-lote-6/01-aerea.jpg",
+      "La casa sobre el talud, vista desde el aire"
+    ],
+    [
+      "img/casa-lote-6/02-llegada.jpg",
+      "La llegada: se parquea sobre la explanación, al nivel de la zona social"
+    ],
+    [
+      "img/casa-lote-6/03-cascada.jpg",
+      "Los tres volúmenes escalonados, con terraza entre uno y otro"
+    ],
+    [
+      "img/casa-lote-6/04-social.jpg",
+      "Nivel 1: sala, comedor y cocina integrados"
+    ],
+    [
+      "img/casa-lote-6/05-chimenea.jpg",
+      "La chimenea de ladrillo parte la fachada y sube hasta la cubierta alta"
+    ],
+    [
+      "img/casa-lote-6/06-deck.jpg",
+      "El deck del nivel 1, con comedor exterior y asador"
+    ],
+    [
+      "img/casa-lote-6/07-escalera.jpg",
+      "La escalera vive en el vacío entre bancales"
+    ],
+    [
+      "img/casa-lote-6/08-balcon.jpg",
+      "Nivel 2: el balcón de la zona privada"
+    ],
+    [
+      "img/casa-lote-6/09-alcoba.jpg",
+      "Nivel 3: la alcoba principal"
+    ],
+    [
+      "img/casa-lote-6/10-proa.jpg",
+      "El voladizo en punta, sobre el vacío"
+    ],
+    [
+      "img/casa-lote-6/11-noche.jpg",
+      "Al anochecer, los tres niveles encendidos"
+    ],
+    [
+      "img/casa-lote-6/12-planta.jpg",
+      "En planta: cómo se reparte la casa sobre el lote"
+    ]
+  ]
+}

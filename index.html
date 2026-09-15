@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Condominio Balcones — Santa Rosa de Osos</title>
 <meta name="description" content="Lotes de casa-finca en Santa Rosa de Osos. Escritura individual, agua potable del acueducto urbano, energía y vías.">
-<link rel="stylesheet" href="assets/css/estilos.css?v=6e2b12a8">
+<link rel="stylesheet" href="assets/css/estilos.css?v=db23f75d">
 <link rel="icon" href="img/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
@@ -64,8 +64,10 @@
       <div><dt>Ubicación</dt><dd class="ficha-sector"></dd></div>
     </dl>
     <a class="ficha-mapa" href="" target="_blank" rel="noopener" hidden>Ver dónde queda en el mapa</a>
-    <!-- Solo en los lotes que tienen paquete de anteproyecto. Hoy, el 6. -->
-    <a class="ficha-casa" href="" hidden>Ver qué se puede construir acá</a>
+    <!-- El anteproyecto del lote, si lo tiene. Va DENTRO de la ficha: mandar
+         al cliente a otra página en mitad de la decisión es perderlo. Lo
+         llena assets/js/ficha.js con lo que diga el manifiesto. -->
+    <section class="ficha-casa" hidden></section>
     <!-- Solo en un lote colocado. Quien llega por el enlace que le mandó un
          comprador cae en un lote que no está a la venta; sin esto no tiene a
          dónde seguir. -->
@@ -109,18 +111,18 @@
 </footer>
 
 <script type="module">
-  import { construirVistaVitrina } from './assets/js/vitrina.js?v=6e2b12a8';
-  import { pintarMapa } from './assets/js/mapa.js?v=6e2b12a8';
-  import { montarFicha, loteDelEnlace } from './assets/js/ficha.js?v=6e2b12a8';
+  import { construirVistaVitrina } from './assets/js/vitrina.js?v=db23f75d';
+  import { pintarMapa } from './assets/js/mapa.js?v=db23f75d';
+  import { montarFicha, loteDelEnlace } from './assets/js/ficha.js?v=db23f75d';
 
-  const inv = await (await fetch('data/lotes.json?v=6e2b12a8')).json();
+  const inv = await (await fetch('data/lotes.json?v=db23f75d')).json();
   const v = construirVistaVitrina(inv);
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = document.getElementById('mapa');
-  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=6e2b12a8')).text();
+  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=db23f75d')).text();
   const vistaMapa = pintarMapa(caja.querySelector('svg'), inv);
 
   // La casilla de «Reservado» de la leyenda sale del dato, no de una decisión

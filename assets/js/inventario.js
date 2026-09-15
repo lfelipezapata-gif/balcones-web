@@ -16,13 +16,16 @@ export const ESTADOS = ['disponible', 'reservado', 'vendido', 'especie'];
 // puede escribir ahí.
 const RUTA_PANO = /^img\/pano\/[a-z0-9-]+\.jpg$/;
 
-// Página de anteproyecto de un lote: el paquete de render que muestra QUÉ SE
-// PUEDE construir ahí. Opcional, y hoy la tiene solo el 6.
+// El anteproyecto de un lote: el paquete de render que muestra QUÉ SE PUEDE
+// construir ahí. Es un manifiesto aparte y no un bloque dentro de este JSON
+// porque son doce imágenes con su pie, un video y un aviso legal: metido acá
+// engordaría el inventario que carga TODA visita, para un dato que hoy usa un
+// solo lote y solo cuando alguien abre su ficha.
 //
-// Va cerrada igual que la panorámica, y por la misma razón: esa ruta termina
-// como `href` en la ficha de venta. Una URL de afuera mandaría al visitante a
-// un sitio que no controlamos justo en el momento en que está decidiendo.
-const RUTA_CASA = /^casa-lote-[0-9]{1,3}\.html$/;
+// Va cerrado igual que la panorámica, y por la misma razón: esta ruta termina
+// en un `fetch` desde la página de venta. Una URL de afuera traería contenido
+// que no controlamos justo en el momento en que alguien está decidiendo.
+const RUTA_CASA = /^data\/casa-lote-[0-9]{1,3}\.json$/;
 
 // Caja de coordenadas alrededor de Santa Rosa de Osos. Las escribe
 // herramientas/preparar-aereo.py convirtiendo el CAD de EPSG:9377 a WGS84, y
@@ -80,8 +83,8 @@ export function validarInventario(json) {
     }
     if ('casa' in l && !(typeof l.casa === 'string' && RUTA_CASA.test(l.casa))) {
       throw new Error(
-        `El lote ${l.n} tiene una «casa» que no es una página de este sitio: ${l.casa}. ` +
-        'Tiene que ser una ruta como casa-lote-6.html.'
+        `El lote ${l.n} tiene una «casa» que no es un manifiesto de este sitio: ${l.casa}. ` +
+        'Tiene que ser una ruta como data/casa-lote-6.json.'
       );
     }
   }
@@ -130,4 +133,67 @@ export function lotesDisponibles(json) {
       precio: precioDeLote(l, json.precioM2),
       pano: l.pano ?? null
     }));
+}
+
+// ── El manifiesto de anteproyecto ───────────────────────────────────────────
+// Lo que `casa` apunta. Se valida aparte porque no llega con el inventario:
+// entra por `fetch` cuando alguien abre la ficha de un lote que lo tiene, y
+// para entonces ya no hay nadie mirando si el archivo quedó bien.
+//
+// Las rutas van cerradas igual que la panorámica. Estas terminan dentro de un
+// <img> y de un <video> en la página de venta: una URL de afuera cargaría
+// material de un servidor ajeno en la pestaña del cliente.
+const RUTA_IMG_CASA = /^img\/casa-lote-[0-9]{1,3}\/[a-z0-9-]+\.jpg$/;
+const RUTA_VIDEO_CASA = /^video\/casa-lote-[0-9]{1,3}\.mp4$/;
+
+export function validarCasa(casa) {
+  if (!casa || typeof casa !== 'object') {
+    throw new Error('El manifiesto de anteproyecto no es un objeto.');
+  }
+  for (const campo of ['titulo', 'aviso']) {
+    if (typeof casa[campo] !== 'string' || !casa[campo].trim()) {
+      throw new Error(`El manifiesto de anteproyecto no trae «${campo}».`);
+    }
+  }
+  // El aviso no es decorativo: es lo que separa una propuesta de una promesa.
+  // Un manifiesto que lo deje en blanco o le quite la frase no se publica.
+  if (!/sin construcci[óo]n/i.test(casa.aviso)) {
+    throw new Error(
+      'El aviso del anteproyecto tiene que decir que el lote se vende sin construcción.'
+    );
+  }
+  if (!RUTA_VIDEO_CASA.test(String(casa.video ?? ''))) {
+    throw new Error(`El video del anteproyecto no es de este sitio: ${casa.video}`);
+  }
+  if (!RUTA_IMG_CASA.test(String(casa.poster ?? ''))) {
+    throw new Error(`El poster del anteproyecto no es de este sitio: ${casa.poster}`);
+  }
+  if (!Array.isArray(casa.imagenes) || casa.imagenes.length === 0) {
+    throw new Error('El manifiesto de anteproyecto no trae imágenes.');
+  }
+  for (const par of casa.imagenes) {
+    if (!Array.isArray(par) || par.length !== 2) {
+      throw new Error('Cada imagen del anteproyecto va como [ruta, pie].');
+    }
+    const [src, pie] = par;
+    if (!RUTA_IMG_CASA.test(String(src))) {
+      throw new Error(`Una imagen del anteproyecto no es de este sitio: ${src}`);
+    }
+    // Sin pie, la imagen no explica nada y el lector de pantalla queda mudo.
+    if (typeof pie !== 'string' || !pie.trim()) {
+      throw new Error(`La imagen ${src} del anteproyecto no trae pie.`);
+    }
+  }
+  if (casa.datos !== undefined) {
+    if (!Array.isArray(casa.datos)) {
+      throw new Error('Los datos del anteproyecto van en una lista.');
+    }
+    for (const d of casa.datos) {
+      if (!Array.isArray(d) || d.length !== 2 ||
+          !String(d[0]).trim() || !String(d[1]).trim()) {
+        throw new Error('Cada dato del anteproyecto va como [cifra, explicación].');
+      }
+    }
+  }
+  return casa;
 }

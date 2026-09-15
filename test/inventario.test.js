@@ -119,22 +119,22 @@ test('acepta un lote sin página de anteproyecto', () => {
 });
 
 test('acepta una página de anteproyecto del propio sitio', () => {
-  assert.doesNotThrow(() => validarInventario(conCasa('casa-lote-6.html')));
+  assert.doesNotThrow(() => validarInventario(conCasa('data/casa-lote-6.json')));
 });
 
 test('rechaza una página de anteproyecto que apunte afuera del sitio', () => {
-  for (const malo of ['https://ejemplo.com/casa.html', '//ejemplo.com/casa.html',
-                      '../../secreto.html', 'casa-lote-6.html?x=1',
-                      'otra-casa.html', 'casa-lote-6.htm', '', 6, null]) {
+  for (const malo of ['https://ejemplo.com/casa.json', '//ejemplo.com/casa.json',
+                      '../../secreto.json', 'data/casa-lote-6.json?x=1',
+                      'data/otra-casa.json', 'casa-lote-6.json', '', 6, null]) {
     assert.throws(() => validarInventario(conCasa(malo)), /casa/,
       `debería rechazar «${malo}»`);
   }
 });
 
-// El archivo tiene que existir de verdad. Un enlace a una página que no se
-// subió da un 404 en la ficha del único lote que hoy trae anteproyecto, y
-// nada en tiempo de ejecución lo detecta.
-test('la página de anteproyecto que nombra el inventario existe', () => {
+// El archivo tiene que existir de verdad. Un manifiesto que no se subió da un
+// 404 al abrir la ficha del único lote que hoy trae anteproyecto: la ficha
+// sigue vendiendo, pero el bloque no aparece y nadie se entera de por qué.
+test('el manifiesto de anteproyecto que nombra el inventario existe', () => {
   for (const l of inv.lotes) {
     if (!l.casa) continue;
     assert.ok(existsSync(new URL('../' + l.casa, import.meta.url)),

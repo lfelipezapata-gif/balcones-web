@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote } from './inventario.js?v=6e2b12a8';
-import { pesos, metros } from './formato.js?v=6e2b12a8';
+import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=db23f75d';
+import { pesos, metros } from './formato.js?v=db23f75d';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -143,6 +143,27 @@ export function configPano(ficha) {
   };
 }
 
+// El anteproyecto, ya listo para pintar.
+//
+// Va DENTRO de la ficha y no en una página aparte. Mandar al cliente a otra
+// dirección en mitad de la decisión es perderlo: sale de la vitrina, deja de
+// ver el precio y el botón de WhatsApp, y el camino de vuelta depende de que
+// se acuerde de volver. Acá abre el lote, baja y ve lo que cabe construir sin
+// moverse del mismo sitio donde está el botón para preguntar.
+export function construirCasa(manifiesto) {
+  validarCasa(manifiesto);
+  return {
+    titulo: manifiesto.titulo,
+    entrada: manifiesto.entrada ?? null,
+    aviso: manifiesto.aviso,
+    video: manifiesto.video,
+    poster: manifiesto.poster,
+    duracion: manifiesto.duracion ?? null,
+    datos: (manifiesto.datos ?? []).map(([cifra, glosa]) => ({ cifra, glosa })),
+    imagenes: manifiesto.imagenes.map(([src, pie]) => ({ src, pie }))
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // De acá para abajo se toca el documento. La parte de arriba es la que se
 // prueba: `construirFichaLote` no sabe que existe un navegador.
@@ -158,11 +179,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=6e2b12a8';
+    css.href = 'vendor/pannellum.css?v=db23f75d';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=6e2b12a8';
+    js.src = 'vendor/pannellum.js?v=db23f75d';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -206,18 +227,6 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
       alMapa.hidden = true;
     }
 
-    // La página de anteproyecto. Se maneja igual que el alfiler del mapa: sin
-    // `href` cuando no va, no solo escondida, para que no quede enfocable con
-    // el tabulador apuntando a una página de otro lote.
-    const aLaCasa = dialogo.querySelector('.ficha-casa');
-    if (f.casa) {
-      aLaCasa.href = f.casa;
-      aLaCasa.hidden = false;
-    } else {
-      aLaCasa.removeAttribute('href');
-      aLaCasa.hidden = true;
-    }
-
     // Salida hacia los que sí están en venta. Solo en un lote colocado: quien
     // llega por el enlace que le mandó un comprador cae en un lote con dueño y
     // sin esto no tiene a dónde seguir. Es justo el visitante que se puede
@@ -250,6 +259,7 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
 
     dialogo.showModal();
     montarPano(f);
+    montarCasa(f);
   }
 
   // Se expone para que index.html pueda abrir el lote que pida el enlace.
@@ -304,6 +314,148 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     visor = window.pannellum.viewer(caja, config);
   }
 
+  // ── El anteproyecto, dentro de la ficha ─────────────────────────────────
+  //
+  // El manifiesto entra por `fetch` la primera vez que alguien abre un lote
+  // que lo tiene, no con la página: son doce pies de foto y un aviso legal
+  // para un dato que hoy usa un solo lote de catorce.
+  //
+  // Se guarda en memoria por ruta. Abrir el 6, salir, y volver a entrar es lo
+  // más normal del mundo mirando lotes; pedirlo otra vez cada vez sería
+  // cobrarle al cliente su propia indecisión.
+  const casasPedidas = new Map();
+  const casaCaja = dialogo.querySelector('.ficha-casa');
+
+  // La ruta del manifiesto sale de data/lotes.json en tiempo de ejecución, así
+  // que versionar.py no puede pegarle el `?v=` como hace con las rutas
+  // escritas entre comillas. Sin eso el navegador se queda con el manifiesto
+  // del día que entró: se cambia un pie de foto, se publica, y el cliente
+  // sigue viendo el viejo.
+  //
+  // El token se saca de la URL de ESTE módulo, que index.html sí importa
+  // versionado. Así no hay un segundo sitio donde escribirlo a mano.
+  const VERSION = new URL(import.meta.url).search;
+
+  function soltarCasa() {
+    // Pausar ANTES de vaciar. Un <video> arrancado al que se le quita el
+    // padre del documento sigue sonando en varios navegadores: el cliente
+    // cierra la ficha y le queda la música puesta sin nada en pantalla.
+    const v = casaCaja.querySelector('video');
+    if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+    casaCaja.replaceChildren();
+    casaCaja.hidden = true;
+  }
+
+  function pintarCasa(c) {
+    const h = document.createElement('h4');
+    h.className = 'casa-titulo';
+    h.textContent = c.titulo;
+
+    const partes = [h];
+    if (c.entrada) {
+      const p = document.createElement('p');
+      p.className = 'casa-entrada';
+      p.textContent = c.entrada;
+      partes.push(p);
+    }
+
+    // El aviso va ARRIBA, antes del video. Abajo lo lee quien llegue hasta el
+    // final, y el que se antoja con el primer render y escribe de una no llega
+    // al final.
+    const aviso = document.createElement('p');
+    aviso.className = 'casa-aviso';
+    aviso.textContent = c.aviso;
+    partes.push(aviso);
+
+    const video = document.createElement('video');
+    video.className = 'casa-video';
+    video.controls = true;
+    // Ni `auto` ni `metadata`: en GitHub Pages no hay streaming, así que
+    // `auto` se bajaría el archivo entero por abrir una ficha. Arranca cuando
+    // el cliente le da play, y no antes.
+    video.preload = 'none';
+    video.playsInline = true;
+    video.poster = c.poster;
+    video.src = c.video;
+    partes.push(video);
+
+    if (c.duracion) {
+      const pie = document.createElement('p');
+      pie.className = 'casa-pie';
+      pie.textContent = c.duracion;
+      partes.push(pie);
+    }
+
+    if (c.datos.length) {
+      const ul = document.createElement('ul');
+      ul.className = 'casa-datos';
+      for (const d of c.datos) {
+        const li = document.createElement('li');
+        const b = document.createElement('b');
+        b.textContent = d.cifra;
+        const s = document.createElement('span');
+        s.textContent = d.glosa;
+        li.append(b, s);
+        ul.append(li);
+      }
+      partes.push(ul);
+    }
+
+    const galeria = document.createElement('div');
+    galeria.className = 'casa-galeria';
+    for (const im of c.imagenes) {
+      const fig = document.createElement('figure');
+      const img = document.createElement('img');
+      img.src = im.src;
+      img.alt = im.pie;
+      // Perezosas y con medidas. Son doce: sin `lazy` se bajan las doce por
+      // abrir la ficha, y sin medidas la ficha da saltos mientras cargan y
+      // mueve de sitio el botón de WhatsApp justo cuando alguien va a pulsarlo.
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.width = 1400;
+      img.height = 1045;
+      const cap = document.createElement('figcaption');
+      cap.textContent = im.pie;
+      fig.append(img, cap);
+      galeria.append(fig);
+    }
+    partes.push(galeria);
+
+    const cierre = document.createElement('p');
+    cierre.className = 'casa-aviso';
+    cierre.textContent = c.aviso;
+    partes.push(cierre);
+
+    casaCaja.replaceChildren(...partes);
+    casaCaja.hidden = false;
+  }
+
+  async function montarCasa(f) {
+    const mio = turno;
+    soltarCasa();
+    if (!f.casa) return;
+    try {
+      if (!casasPedidas.has(f.casa)) {
+        casasPedidas.set(f.casa, fetch(f.casa + VERSION).then(r => {
+          if (!r.ok) throw new Error(`No se pudo leer ${f.casa}`);
+          return r.json();
+        }).then(construirCasa));
+      }
+      const c = await casasPedidas.get(f.casa);
+      // Mientras se pedía el archivo, el cliente pudo cerrar o saltar a otro
+      // lote. Sin esto, el anteproyecto del 6 aparecería dentro de la ficha
+      // del 7.
+      if (mio !== turno || !dialogo.open) return;
+      pintarCasa(c);
+    } catch {
+      // Sin anteproyecto la ficha sigue vendiendo: área, precio y WhatsApp son
+      // lo que cierra. Un manifiesto que no cargó no puede llevarse la ficha.
+      casasPedidas.delete(f.casa);
+      soltarCasa();
+    }
+  }
+
   // Pantalla completa.
   //
   // No se usa la API de pantalla completa del navegador a propósito: en iPhone
@@ -350,6 +502,7 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
   const observador = new MutationObserver(() => {
     if (dialogo.open) return;
     soltarPano();
+    soltarCasa();
     dialogo.classList.remove('agrandada');
     // Se le quita el lote a la URL al cerrar, si no queda apuntando a una
     // ficha que ya nadie está viendo y recargar la vuelve a abrir sola.
@@ -363,6 +516,7 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
   // no molesta si ya se solto.
   dialogo.addEventListener('close', () => {
     soltarPano();
+    soltarCasa();
     dialogo.classList.remove('agrandada');
   });
 

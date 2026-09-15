@@ -1,5 +1,5 @@
-import { resumenInventario, lotesDisponibles } from './inventario.js?v=6e2b12a8';
-import { pesos, metros } from './formato.js?v=6e2b12a8';
+import { resumenInventario, lotesDisponibles } from './inventario.js?v=db23f75d';
+import { pesos, metros } from './formato.js?v=db23f75d';
 
 // Lo que se lee ARRIBA del plano, antes de verlo.
 //

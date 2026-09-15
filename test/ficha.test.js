@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { construirFichaLote, configPano, loteDelEnlace, WHATSAPP } from '../assets/js/ficha.js';
+import { construirFichaLote, construirCasa, configPano, loteDelEnlace, WHATSAPP } from '../assets/js/ficha.js';
 import { ESTADOS } from '../assets/js/inventario.js';
 import { existsSync, statSync } from 'node:fs';
 
@@ -262,20 +262,20 @@ test('un lote que no existe no abre nada y no revienta', () => {
   assert.equal(loteDelEnlace('#lote-0', inv), null);
 });
 
-// ── La página de anteproyecto en la ficha ───────────────────────────────────
-// El lote 6 es el único que hoy tiene paquete de render. El enlace sale del
+// ── El anteproyecto, dentro de la ficha ─────────────────────────────────────
+// El lote 6 es el único que hoy tiene paquete de render. La ruta sale del
 // inventario, no de una condición escrita a mano, para que el día que el 7
 // tenga el suyo baste con tocar data/lotes.json.
 
 const sinCasa = { ...inv, lotes: [{ n: 1, sector: 1, area: 2000, estado: 'disponible' }] };
-const conCasa = { ...inv, lotes: [{ ...sinCasa.lotes[0], casa: 'casa-lote-6.html' }] };
+const conCasa = { ...inv, lotes: [{ ...sinCasa.lotes[0], casa: 'data/casa-lote-6.json' }] };
 
 test('sin anteproyecto la ficha viene con casa en null', () => {
   assert.equal(construirFichaLote(sinCasa, 1).casa, null);
 });
 
-test('con anteproyecto la ficha pasa la ruta tal cual', () => {
-  assert.equal(construirFichaLote(conCasa, 1).casa, 'casa-lote-6.html');
+test('con anteproyecto la ficha pasa la ruta del manifiesto', () => {
+  assert.equal(construirFichaLote(conCasa, 1).casa, 'data/casa-lote-6.json');
 });
 
 // Un lote colocado no puede ofrecer el anteproyecto: es enseñarle a alguien lo
@@ -290,61 +290,79 @@ test('un lote que ya no se vende no ofrece el anteproyecto', () => {
   }
 });
 
-// El enlace tiene que existir en el documento, si no `montarFicha` revienta al
-// abrir un lote con anteproyecto y se lleva la ficha entera por delante.
-test('index.html trae el enlace al anteproyecto, escondido de nacimiento', () => {
+// El contenedor tiene que existir en el documento y nacer escondido. Si no
+// está, `montarFicha` revienta al abrir el lote 6 y se lleva la ficha entera
+// —precio y botón de WhatsApp incluidos— por delante.
+test('index.html trae el contenedor del anteproyecto, escondido de nacimiento', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /class="ficha-casa"[^>]*hidden/,
-    'falta el <a class="ficha-casa"> o no nace escondido');
+  assert.match(html, /<section class="ficha-casa"[^>]*hidden><\/section>/,
+    'falta el <section class="ficha-casa"> o no nace escondido');
 });
 
-// ── La página de anteproyecto en sí ─────────────────────────────────────────
-// Es la única página del sitio que muestra algo que no se vende. El aviso de
-// que el lote va sin construcción no es una formalidad: es lo que separa una
-// propuesta de una promesa. Va dos veces, arriba y abajo.
-
-const CASA = readFileSync(new URL('../casa-lote-6.html', import.meta.url), 'utf8');
-
-test('la página de anteproyecto avisa dos veces que el lote va sin construcción', () => {
-  const avisos = CASA.match(/sin construcci[óo]n/gi) ?? [];
-  assert.ok(avisos.length >= 2,
-    `el aviso aparece ${avisos.length} vez/veces y tiene que aparecer arriba y abajo`);
+// El anteproyecto ya NO vive en una página aparte. Si alguien vuelve a poner
+// un enlace que saque al cliente de la vitrina, esta prueba lo dice.
+test('la ficha no manda al cliente fuera de la vitrina', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(!/<a[^>]*class="ficha-casa"/.test(html),
+    'el anteproyecto volvió a ser un enlace que saca al cliente de la vitrina');
 });
 
-test('el video de la página existe y trae poster', () => {
-  assert.match(CASA, /<source src="video\/casa-lote-6\.mp4"/);
-  assert.match(CASA, /poster="img\/casa-lote-6\/poster\.jpg"/);
-  for (const rel of ['video/casa-lote-6.mp4', 'img/casa-lote-6/poster.jpg']) {
+// ── El manifiesto del anteproyecto ──────────────────────────────────────────
+
+const CASA = JSON.parse(readFileSync(new URL('../data/casa-lote-6.json', import.meta.url)));
+
+test('el manifiesto del lote 6 se puede construir', () => {
+  const c = construirCasa(CASA);
+  assert.equal(c.video, 'video/casa-lote-6.mp4');
+  assert.equal(c.imagenes.length, 12);
+  assert.ok(c.imagenes.every(i => i.src && i.pie));
+  assert.equal(c.datos.length, 4);
+});
+
+// El aviso no es decorativo: es lo que separa una propuesta de una promesa.
+// Se pinta dos veces —antes del video y después de la galería— y el validador
+// exige que diga lo que tiene que decir.
+test('el aviso del manifiesto dice que el lote va sin construcción', () => {
+  assert.match(CASA.aviso, /sin construcci[óo]n/i);
+  const roto = { ...CASA, aviso: 'Anteproyecto ilustrativo.' };
+  assert.throws(() => construirCasa(roto), /sin construcci/i);
+});
+
+test('el manifiesto rechaza material de afuera del sitio', () => {
+  for (const malo of [{ video: 'https://ejemplo.com/v.mp4' },
+                      { poster: 'https://ejemplo.com/p.jpg' },
+                      { imagenes: [['https://ejemplo.com/a.jpg', 'pie']] },
+                      { imagenes: [['../../secreto.jpg', 'pie']] }]) {
+    assert.throws(() => construirCasa({ ...CASA, ...malo }),
+      /no es de este sitio/, `debería rechazar ${JSON.stringify(malo)}`);
+  }
+});
+
+// Una imagen sin pie deja mudo al lector de pantalla y sin explicación a quien
+// mira. Son doce: revisarlas a ojo no escala.
+test('el manifiesto exige pie en cada imagen', () => {
+  assert.throws(() => construirCasa({ ...CASA, imagenes: [['img/casa-lote-6/01-aerea.jpg', '']] }),
+    /no trae pie/);
+});
+
+test('todo el material que nombra el manifiesto está en el repositorio', () => {
+  for (const rel of [CASA.video, CASA.poster, ...CASA.imagenes.map(i => i[0])]) {
     assert.ok(existsSync(new URL('../' + rel, import.meta.url)), `falta ${rel}`);
   }
 });
 
-// Un <img> sin archivo detrás es un hueco gris en una página de venta, y en
-// una galería de doce nadie lo nota revisando a ojo.
-test('todas las imágenes de la galería están en el repositorio', () => {
-  const rutas = [...CASA.matchAll(/src="(img\/casa-lote-6\/[^"]+)"/g)].map(m => m[1]);
-  assert.ok(rutas.length >= 12, `solo hay ${rutas.length} imágenes referenciadas`);
-  for (const r of rutas) {
-    assert.ok(existsSync(new URL('../' + r, import.meta.url)), `falta ${r}`);
-  }
-});
-
 // El video se sirve desde GitHub Pages, que no hace streaming: lo que pese se
-// descarga. Con `preload="none"` no arranca solo, pero quien le da play espera
-// todo. Por encima de unos 12 MB deja de ser razonable en datos móviles.
-test('el video de la página pesa lo que se puede mandar por datos', () => {
-  const kb = statSync(new URL('../video/casa-lote-6.mp4', import.meta.url)).size / 1024;
+// descarga. Por encima de unos 12 MB deja de ser razonable en datos móviles,
+// y esto se abre desde un teléfono en la mitad de los casos.
+test('el video del anteproyecto pesa lo que se puede mandar por datos', () => {
+  const kb = statSync(new URL('../' + CASA.video, import.meta.url)).size / 1024;
   assert.ok(kb < 12 * 1024, `el video pesa ${Math.round(kb)} KB y el techo son 12 MB`);
-  assert.match(CASA, /preload="none"/, 'el video no puede precargarse solo');
 });
 
-// Todas las imágenes de la galería van con `loading="lazy"` y con medidas: sin
-// medidas la página salta mientras cargan, y son doce.
-test('la galería carga perezosa y con medidas', () => {
-  const figs = [...CASA.matchAll(/<img src="img\/casa-lote-6\/(?!poster)[^"]+"[^>]*>/g)]
-    .map(m => m[0]);
-  for (const img of figs) {
-    assert.match(img, /loading="lazy"/, `sin loading lazy: ${img.slice(0, 60)}`);
-    assert.match(img, /width="\d+" height="\d+"/, `sin medidas: ${img.slice(0, 60)}`);
-  }
+// La dirección de la página vieja ya circuló por WhatsApp. Un enlace reenviado
+// que dé en 404 es peor que una redirección.
+test('la dirección vieja sigue viva y lleva a la ficha', () => {
+  const vieja = readFileSync(new URL('../casa-lote-6.html', import.meta.url), 'utf8');
+  assert.match(vieja, /http-equiv="refresh"[^>]*index\.html#lote-6/);
+  assert.match(vieja, /location\.replace\('index\.html#lote-6'\)/);
 });

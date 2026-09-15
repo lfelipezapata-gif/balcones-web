@@ -51,6 +51,7 @@ VERSIONADOS = [
     "assets/js/paneles.js",
     "assets/js/tablero.js",
     "assets/js/vitrina.js",
+    "data/casa-lote-6.json",
     "data/lotes.json",
     "img/mapa-aereo.svg",
     "img/ortofoto.jpg",
@@ -59,7 +60,7 @@ VERSIONADOS = [
 ]
 
 # Donde se reescriben las referencias.
-ESCRIBIR_EN = ["index.html", "casa-lote-6.html", "img/mapa-aereo.svg",
+ESCRIBIR_EN = ["index.html", "img/mapa-aereo.svg",
                "assets/js/ficha.js", "assets/js/vitrina.js",
                "assets/js/mapa.js", "assets/js/tablero.js",
                "assets/js/paneles.js", "assets/js/inventario.js",

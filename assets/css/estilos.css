@@ -362,17 +362,58 @@ dialog.ficha:not([open]) { display: none; }
 .ficha-mapa[hidden] { display: none; }
 .ficha-mapa::before { content: '◎ '; }
 
-/* El enlace al anteproyecto, en la ficha de un lote que lo tiene. Va debajo
-   del alfiler del mapa y se ve distinto a proposito: el alfiler informa,
-   este vende. De ahi el fondo lleno en vez del subrayado. */
+/* El anteproyecto DENTRO de la ficha.
+
+   Va acá y no en una pagina aparte a proposito: mandar al cliente a otra
+   direccion en mitad de la decision es perderlo. Se separa del resto con una
+   linea arriba para que se lea como otra cosa —esto no se vende, es lo que
+   se PODRIA construir— sin sacarlo del mismo desplazamiento donde estan el
+   precio y el boton de WhatsApp. */
 .ficha-casa {
-  display: block; margin-top: .9rem; padding: .7rem .9rem;
-  background: #eef4ef; border: 1px solid var(--verde); border-radius: 10px;
-  color: var(--verde); font-weight: 600; text-decoration: none;
+  margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--borde);
 }
 .ficha-casa[hidden] { display: none; }
-.ficha-casa::after { content: ' →'; }
+/* A pantalla completa manda la panoramica y nada mas: el anteproyecto ahi
+   estorba y ademas seguiria sonando el video detras de la vista. */
 .ficha.agrandada .ficha-casa { display: none; }
+
+.casa-titulo { margin: 0 0 .3rem; font-size: 1.15rem; color: var(--verde); }
+.casa-entrada { margin: 0 0 .9rem; color: #555; }
+
+/* El aviso aparece dos veces, antes del video y despues de la galeria. No es
+   formalismo: es lo que separa una propuesta de una promesa, y el que se
+   antoja con el primer render y escribe de una nunca llega al final. */
+.casa-aviso {
+  margin: .9rem 0; padding: .7rem .85rem;
+  border-left: 3px solid var(--dorado); background: #fffdf5;
+  font-size: .9rem; color: #4a4a4a;
+}
+
+.casa-video { width: 100%; border-radius: 10px; display: block; background: #000; }
+.casa-pie { font-size: .8rem; color: #6b6b6b; margin: .4rem 0 0; }
+
+.casa-datos {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .6rem;
+  margin: 1rem 0 0; padding: 0; list-style: none;
+}
+.casa-datos li {
+  border: 1px solid var(--borde); border-radius: 8px; padding: .6rem .7rem;
+  background: #fff;
+}
+.casa-datos b { display: block; font-size: 1.1rem; color: var(--verde); }
+.casa-datos span { font-size: .8rem; color: #555; }
+
+.casa-galeria { display: grid; gap: 1rem; margin-top: 1.2rem; }
+.casa-galeria figure { margin: 0; }
+.casa-galeria img {
+  width: 100%; height: auto; border-radius: 10px; display: block;
+  background: #eee;
+}
+.casa-galeria figcaption { font-size: .8rem; color: #6b6b6b; margin-top: .35rem; }
+
+/* Dos columnas SIEMPRE. La ficha mide unos 450 px aunque la ventana sea
+   ancha, asi que una media query sobre el viewport no dice nada de ella: a
+   cuatro columnas «15 x 22 m» se parte en tres renglones. */
 
 /* La salida hacia los lotes en venta, en la ficha de uno colocado. */
 .ficha-hacia-disponibles {
@@ -1284,52 +1325,4 @@ dialog.ficha:not([open]) { display: none; }
   color: inherit; font-size: 1rem;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Pagina de anteproyecto de un lote (casa-lote-6.html).
-
-   Es la unica pagina del sitio que muestra algo que NO se vende: la casa es
-   una propuesta de lo que cabe en el lote. Por eso el aviso de que el lote va
-   sin construccion no es un pie de pagina, es un bloque con borde que
-   aparece dos veces, arriba y abajo. Quien entre por un enlace directo y se
-   vaya a la mitad tiene que haberlo visto.
-   ───────────────────────────────────────────────────────────────────────── */
-.anteproyecto .video {
-  width: 100%; border-radius: 10px; display: block; background: #000;
-}
-.anteproyecto .dato {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem; margin: 1.5rem 0 0; padding: 0; list-style: none;
-}
-.anteproyecto .dato li {
-  border: 1px solid var(--borde); border-radius: 10px; padding: .9rem 1rem;
-  background: #fff;
-}
-.anteproyecto .dato b { display: block; font-size: 1.25rem; color: var(--verde); }
-.anteproyecto .dato span { color: #555; font-size: .9rem; }
-
-.aviso {
-  border: 2px solid var(--dorado); border-radius: 10px;
-  padding: 1rem 1.1rem; margin: 1.5rem 0; background: #fffdf5;
-}
-.aviso p { margin: 0; }
-.aviso p + p { margin-top: .5rem; color: #555; font-size: .92rem; }
-
-.galeria { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
-.galeria figure { margin: 0; }
-.galeria img {
-  width: 100%; border-radius: 10px; display: block; background: #eee;
-}
-.galeria figcaption { font-size: .85rem; color: #6b6b6b; margin-top: .45rem; }
-
-.volver {
-  display: inline-block; margin-top: 1.5rem;
-  color: var(--verde); font-weight: 600; text-decoration: none;
-}
-.volver::before { content: '← '; }
-
-@media (min-width: 700px) {
-  .galeria { grid-template-columns: 1fr 1fr; }
-  /* La aerea, la llegada y la planta se leen mal a media pagina: son las que
-     llevan el contexto del lote entero. */
-  .galeria figure.ancha { grid-column: 1 / -1; }
 }

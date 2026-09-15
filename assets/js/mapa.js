@@ -1,5 +1,5 @@
-import { validarInventario, resumenInventario } from './inventario.js?v=6e2b12a8';
-import { metros } from './formato.js?v=6e2b12a8';
+import { validarInventario, resumenInventario } from './inventario.js?v=db23f75d';
+import { metros } from './formato.js?v=db23f75d';
 
 // El plano de lotes se pinta desde data/lotes.json.
 //
