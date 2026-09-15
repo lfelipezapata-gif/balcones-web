@@ -54,7 +54,8 @@
       "estado": "disponible",
       "pano": "img/pano/lote-06.jpg",
       "lat": 6.650154,
-      "lon": -75.445404
+      "lon": -75.445404,
+      "casa": "casa-lote-6.html"
     },
     {
       "n": 7,

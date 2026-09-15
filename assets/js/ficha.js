@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote } from './inventario.js?v=5ee135b9';
-import { pesos, metros } from './formato.js?v=5ee135b9';
+import { validarInventario, precioDeLote } from './inventario.js?v=6e2b12a8';
+import { pesos, metros } from './formato.js?v=6e2b12a8';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -72,6 +72,10 @@ export function construirFichaLote(json, n) {
     // una panorámica pesa lo que pesan todas las demás imágenes juntas, así que
     // no puede entrar al vuelo con la página.
     pano: lote.pano ?? null,
+    // La página de anteproyecto, si el lote tiene una. Solo en un lote que
+    // todavía se vende: enseñarle a alguien lo que se puede construir en un
+    // lote con dueño es enseñarle algo que no puede comprar.
+    casa: disponible ? (lote.casa ?? null) : null,
     whatsapp: disponible ? enlaceWhatsApp(lote.n, areaTexto) : null,
     // Un lote colocado tambien lleva alfiler: quien mira quiere saber donde
     // quedo lo que se vendio. Lo que no lleva es el boton de pedirlo.
@@ -154,11 +158,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=5ee135b9';
+    css.href = 'vendor/pannellum.css?v=6e2b12a8';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=5ee135b9';
+    js.src = 'vendor/pannellum.js?v=6e2b12a8';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -200,6 +204,18 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     } else {
       alMapa.removeAttribute('href');
       alMapa.hidden = true;
+    }
+
+    // La página de anteproyecto. Se maneja igual que el alfiler del mapa: sin
+    // `href` cuando no va, no solo escondida, para que no quede enfocable con
+    // el tabulador apuntando a una página de otro lote.
+    const aLaCasa = dialogo.querySelector('.ficha-casa');
+    if (f.casa) {
+      aLaCasa.href = f.casa;
+      aLaCasa.hidden = false;
+    } else {
+      aLaCasa.removeAttribute('href');
+      aLaCasa.hidden = true;
     }
 
     // Salida hacia los que sí están en venta. Solo en un lote colocado: quien

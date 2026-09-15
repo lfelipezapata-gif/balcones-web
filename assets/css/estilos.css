@@ -362,6 +362,18 @@ dialog.ficha:not([open]) { display: none; }
 .ficha-mapa[hidden] { display: none; }
 .ficha-mapa::before { content: '◎ '; }
 
+/* El enlace al anteproyecto, en la ficha de un lote que lo tiene. Va debajo
+   del alfiler del mapa y se ve distinto a proposito: el alfiler informa,
+   este vende. De ahi el fondo lleno en vez del subrayado. */
+.ficha-casa {
+  display: block; margin-top: .9rem; padding: .7rem .9rem;
+  background: #eef4ef; border: 1px solid var(--verde); border-radius: 10px;
+  color: var(--verde); font-weight: 600; text-decoration: none;
+}
+.ficha-casa[hidden] { display: none; }
+.ficha-casa::after { content: ' →'; }
+.ficha.agrandada .ficha-casa { display: none; }
+
 /* La salida hacia los lotes en venta, en la ficha de uno colocado. */
 .ficha-hacia-disponibles {
   display: block; margin-top: 1rem;
@@ -1270,4 +1282,54 @@ dialog.ficha:not([open]) { display: none; }
   background: #fff4e0; border: 1px solid #e8c98a;
   padding: .9rem; border-radius: 8px;
   color: inherit; font-size: 1rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Pagina de anteproyecto de un lote (casa-lote-6.html).
+
+   Es la unica pagina del sitio que muestra algo que NO se vende: la casa es
+   una propuesta de lo que cabe en el lote. Por eso el aviso de que el lote va
+   sin construccion no es un pie de pagina, es un bloque con borde que
+   aparece dos veces, arriba y abajo. Quien entre por un enlace directo y se
+   vaya a la mitad tiene que haberlo visto.
+   ───────────────────────────────────────────────────────────────────────── */
+.anteproyecto .video {
+  width: 100%; border-radius: 10px; display: block; background: #000;
+}
+.anteproyecto .dato {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem; margin: 1.5rem 0 0; padding: 0; list-style: none;
+}
+.anteproyecto .dato li {
+  border: 1px solid var(--borde); border-radius: 10px; padding: .9rem 1rem;
+  background: #fff;
+}
+.anteproyecto .dato b { display: block; font-size: 1.25rem; color: var(--verde); }
+.anteproyecto .dato span { color: #555; font-size: .9rem; }
+
+.aviso {
+  border: 2px solid var(--dorado); border-radius: 10px;
+  padding: 1rem 1.1rem; margin: 1.5rem 0; background: #fffdf5;
+}
+.aviso p { margin: 0; }
+.aviso p + p { margin-top: .5rem; color: #555; font-size: .92rem; }
+
+.galeria { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+.galeria figure { margin: 0; }
+.galeria img {
+  width: 100%; border-radius: 10px; display: block; background: #eee;
+}
+.galeria figcaption { font-size: .85rem; color: #6b6b6b; margin-top: .45rem; }
+
+.volver {
+  display: inline-block; margin-top: 1.5rem;
+  color: var(--verde); font-weight: 600; text-decoration: none;
+}
+.volver::before { content: '← '; }
+
+@media (min-width: 700px) {
+  .galeria { grid-template-columns: 1fr 1fr; }
+  /* La aerea, la llegada y la planta se leen mal a media pagina: son las que
+     llevan el contexto del lote entero. */
+  .galeria figure.ancha { grid-column: 1 / -1; }
 }

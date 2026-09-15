@@ -16,6 +16,14 @@ export const ESTADOS = ['disponible', 'reservado', 'vendido', 'especie'];
 // puede escribir ahí.
 const RUTA_PANO = /^img\/pano\/[a-z0-9-]+\.jpg$/;
 
+// Página de anteproyecto de un lote: el paquete de render que muestra QUÉ SE
+// PUEDE construir ahí. Opcional, y hoy la tiene solo el 6.
+//
+// Va cerrada igual que la panorámica, y por la misma razón: esa ruta termina
+// como `href` en la ficha de venta. Una URL de afuera mandaría al visitante a
+// un sitio que no controlamos justo en el momento en que está decidiendo.
+const RUTA_CASA = /^casa-lote-[0-9]{1,3}\.html$/;
+
 // Caja de coordenadas alrededor de Santa Rosa de Osos. Las escribe
 // herramientas/preparar-aereo.py convirtiendo el CAD de EPSG:9377 a WGS84, y
 // una conversion mal hecha no da un numero raro: da un numero perfectamente
@@ -68,6 +76,12 @@ export function validarInventario(json) {
       throw new Error(
         `El lote ${l.n} tiene un «pano» que no es una panorámica de este sitio: ${l.pano}. ` +
         'Tiene que ser una ruta como img/pano/lote-07.jpg.'
+      );
+    }
+    if ('casa' in l && !(typeof l.casa === 'string' && RUTA_CASA.test(l.casa))) {
+      throw new Error(
+        `El lote ${l.n} tiene una «casa» que no es una página de este sitio: ${l.casa}. ` +
+        'Tiene que ser una ruta como casa-lote-6.html.'
       );
     }
   }

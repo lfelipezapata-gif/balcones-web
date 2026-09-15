@@ -59,7 +59,7 @@ VERSIONADOS = [
 ]
 
 # Donde se reescriben las referencias.
-ESCRIBIR_EN = ["index.html", "img/mapa-aereo.svg",
+ESCRIBIR_EN = ["index.html", "casa-lote-6.html", "img/mapa-aereo.svg",
                "assets/js/ficha.js", "assets/js/vitrina.js",
                "assets/js/mapa.js", "assets/js/tablero.js",
                "assets/js/paneles.js", "assets/js/inventario.js",

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import {
   validarInventario, precioDeLote, resumenInventario, lotesDisponibles, ESTADOS
 } from '../assets/js/inventario.js';
@@ -97,6 +97,48 @@ test('rechaza una panorámica que apunte afuera del sitio', () => {
                       'img/portada.jpg', 'img/pano/lote-01.png', 7, null]) {
     assert.throws(() => validarInventario(conPano(malo)), /pano/,
       `debería rechazar «${malo}»`);
+  }
+});
+
+// ── La página de anteproyecto ───────────────────────────────────────────────
+// Mismo razonamiento que la panorámica: `casa` termina como `href` en la ficha
+// de venta, así que tiene que ser una página de este repositorio. Un enlace de
+// afuera sacaría al visitante del sitio justo mientras decide.
+
+const conCasa = (casa) => ({
+  ...inv,
+  lotes: [{ n: 1, sector: 1, area: 100, estado: 'disponible', casa }]
+});
+
+// Sin la clave, no con la clave en `undefined`: `'casa' in l` da verdadero
+// igual y el validador la revisa. De un JSON nunca sale `undefined`, así que
+// la única forma real de «no tener anteproyecto» es que la clave no esté.
+test('acepta un lote sin página de anteproyecto', () => {
+  const sin = { ...inv, lotes: [{ n: 1, sector: 1, area: 100, estado: 'disponible' }] };
+  assert.doesNotThrow(() => validarInventario(sin));
+});
+
+test('acepta una página de anteproyecto del propio sitio', () => {
+  assert.doesNotThrow(() => validarInventario(conCasa('casa-lote-6.html')));
+});
+
+test('rechaza una página de anteproyecto que apunte afuera del sitio', () => {
+  for (const malo of ['https://ejemplo.com/casa.html', '//ejemplo.com/casa.html',
+                      '../../secreto.html', 'casa-lote-6.html?x=1',
+                      'otra-casa.html', 'casa-lote-6.htm', '', 6, null]) {
+    assert.throws(() => validarInventario(conCasa(malo)), /casa/,
+      `debería rechazar «${malo}»`);
+  }
+});
+
+// El archivo tiene que existir de verdad. Un enlace a una página que no se
+// subió da un 404 en la ficha del único lote que hoy trae anteproyecto, y
+// nada en tiempo de ejecución lo detecta.
+test('la página de anteproyecto que nombra el inventario existe', () => {
+  for (const l of inv.lotes) {
+    if (!l.casa) continue;
+    assert.ok(existsSync(new URL('../' + l.casa, import.meta.url)),
+      `el lote ${l.n} apunta a ${l.casa} y ese archivo no está en el repositorio`);
   }
 });
 
