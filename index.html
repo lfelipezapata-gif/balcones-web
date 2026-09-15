@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Condominio Balcones — Santa Rosa de Osos</title>
 <meta name="description" content="Lotes de casa-finca en Santa Rosa de Osos. Escritura individual, agua potable del acueducto urbano, energía y vías.">
-<link rel="stylesheet" href="assets/css/estilos.css?v=db23f75d">
+<link rel="stylesheet" href="assets/css/estilos.css?v=4cc9b193">
 <link rel="icon" href="img/favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 </head>
@@ -58,11 +58,16 @@
       <button class="ficha-agrandar" type="button">Ver en grande</button>
     </div>
     <dl class="ficha-datos">
-      <div><dt>Área</dt><dd class="ficha-area"></dd></div>
+      <div><dt class="ficha-area-etiqueta">Área</dt><dd class="ficha-area"></dd></div>
+      <!-- Solo cuando lo que se entrega no es lo que se escritura. Hoy, el 6. -->
+      <div class="ficha-area-real-fila" hidden><dt>Se entregan</dt><dd class="ficha-area-real"></dd></div>
       <div><dt>Precio</dt><dd class="ficha-precio"></dd></div>
       <div><dt>Valor</dt><dd class="ficha-precio-m2"></dd></div>
       <div><dt>Ubicación</dt><dd class="ficha-sector"></dd></div>
     </dl>
+    <!-- La explicación de por qué hay dos áreas. Va pegada a la tabla: un
+         número sin explicación en una página de venta se lee como un error. -->
+    <p class="ficha-nota-area" hidden></p>
     <a class="ficha-mapa" href="" target="_blank" rel="noopener" hidden>Ver dónde queda en el mapa</a>
     <!-- El anteproyecto del lote, si lo tiene. Va DENTRO de la ficha: mandar
          al cliente a otra página en mitad de la decisión es perderlo. Lo
@@ -111,18 +116,18 @@
 </footer>
 
 <script type="module">
-  import { construirVistaVitrina } from './assets/js/vitrina.js?v=db23f75d';
-  import { pintarMapa } from './assets/js/mapa.js?v=db23f75d';
-  import { montarFicha, loteDelEnlace } from './assets/js/ficha.js?v=db23f75d';
+  import { construirVistaVitrina } from './assets/js/vitrina.js?v=4cc9b193';
+  import { pintarMapa } from './assets/js/mapa.js?v=4cc9b193';
+  import { montarFicha, loteDelEnlace } from './assets/js/ficha.js?v=4cc9b193';
 
-  const inv = await (await fetch('data/lotes.json?v=db23f75d')).json();
+  const inv = await (await fetch('data/lotes.json?v=4cc9b193')).json();
   const v = construirVistaVitrina(inv);
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = document.getElementById('mapa');
-  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=db23f75d')).text();
+  caja.innerHTML = await (await fetch('img/mapa-aereo.svg?v=4cc9b193')).text();
   const vistaMapa = pintarMapa(caja.querySelector('svg'), inv);
 
   // La casilla de «Reservado» de la leyenda sale del dato, no de una decisión
@@ -141,7 +146,7 @@
   tarjetas.innerHTML = v.tarjetas.map(t => `
     <article class="tarjeta">
       <h3><button class="abrir" type="button" data-lote="${t.n}">Lote ${t.n}</button></h3>
-      <p class="area">${t.areaTexto}</p>
+      <p class="area">${t.areaTexto}${t.areaRealTexto ? ` <span class="area-real">· ${t.areaRealTexto}</span>` : ''}</p>
       <p class="precio">${t.precioTexto}</p>
       ${t.tiene360 ? '<p class="marca360">Ver la vista en 360°</p>' : ''}
     </article>`).join('');

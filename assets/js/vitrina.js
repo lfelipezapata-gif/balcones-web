@@ -1,5 +1,5 @@
-import { resumenInventario, lotesDisponibles } from './inventario.js?v=db23f75d';
-import { pesos, metros } from './formato.js?v=db23f75d';
+import { resumenInventario, lotesDisponibles } from './inventario.js?v=4cc9b193';
+import { pesos, metros } from './formato.js?v=4cc9b193';
 
 // Lo que se lee ARRIBA del plano, antes de verlo.
 //
@@ -46,6 +46,10 @@ export function construirVistaVitrina(json) {
       sector: l.sector,
       area: l.area,
       areaTexto: metros(l.area),
+      // Lo que se entrega, cuando no es lo que se escritura. Sin el «se
+      // entregan» delante, la tarjeta mostraria dos cifras sueltas y la mas
+      // grande se leeria como el area del titulo.
+      areaRealTexto: l.areaReal ? `se entregan ${metros(l.areaReal)}` : null,
       precio: l.precio,
       precioTexto: pesos(l.precio),
       tiene360: Boolean(l.pano)

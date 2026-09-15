@@ -366,3 +366,38 @@ test('la dirección vieja sigue viva y lleva a la ficha', () => {
   assert.match(vieja, /http-equiv="refresh"[^>]*index\.html#lote-6/);
   assert.match(vieja, /location\.replace\('index\.html#lote-6'\)/);
 });
+
+// ── Las dos áreas del lote 6 ────────────────────────────────────────────────
+
+test('el lote 6 muestra lo que se escritura y lo que se entrega', () => {
+  const f = construirFichaLote(inv, 6);
+  assert.equal(f.areaTexto, '2.140 m²');
+  assert.equal(f.areaEtiqueta, 'Área escriturable');
+  assert.equal(f.areaRealTexto, '2.394 m²');
+  // El precio NO sube con el área entregada: el folio va a decir 2.140.
+  assert.equal(f.precioTexto, '$235.400.000');
+});
+
+// El número solo, sin la explicación, es peor que no ponerlo: el comprador se
+// queda creyendo que la escritura le va a decir 2.394.
+test('la nota explica por qué hay dos áreas y cuál va al folio', () => {
+  const nota = construirFichaLote(inv, 6).notaArea;
+  assert.match(nota, /2\.140 m²/);
+  assert.match(nota, /2\.394 m²/);
+  assert.match(nota, /254 m²/, 'no dice cuánto es lo de más');
+  assert.match(nota, /folio/i, 'no dice qué va a decir el folio');
+});
+
+test('un lote con una sola área no inventa la segunda fila', () => {
+  const f = construirFichaLote(inv, 7);
+  assert.equal(f.areaEtiqueta, 'Área');
+  assert.equal(f.areaRealTexto, null);
+  assert.equal(f.notaArea, null);
+});
+
+test('index.html trae la fila y la nota del área entregada, escondidas', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /class="ficha-area-real-fila" hidden/);
+  assert.match(html, /class="ficha-nota-area" hidden/);
+  assert.match(html, /class="ficha-area-etiqueta"/);
+});

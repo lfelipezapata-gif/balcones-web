@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=db23f75d';
-import { pesos, metros } from './formato.js?v=db23f75d';
+import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=4cc9b193';
+import { pesos, metros } from './formato.js?v=4cc9b193';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -58,11 +58,27 @@ export function construirFichaLote(json, n) {
   const areaTexto = metros(lote.area);
   const disponible = seVende(lote.estado);
 
+  // El área que se entrega, cuando no es la misma que se escritura. El precio
+  // NO se toca: se calcula sobre la escriturable. Cobrar por metros que el
+  // folio no va a decir es prometer lo que no se puede firmar.
+  const hayMas = Number.isInteger(lote.areaReal) && lote.areaReal > lote.area;
+  const demas = hayMas ? lote.areaReal - lote.area : 0;
+
   return {
     n: lote.n,
     sector: lote.sector,
     titulo: `Lote ${lote.n}`,
     areaTexto,
+    // Cuando hay dos áreas, la etiqueta de la primera deja de ser «Área» a
+    // secas: una fila que dice «Área 2.140» encima de otra que dice 2.394 se
+    // lee como un error del sitio, no como dos cosas distintas.
+    areaEtiqueta: hayMas ? 'Área escriturable' : 'Área',
+    areaRealTexto: hayMas ? metros(lote.areaReal) : null,
+    notaArea: hayMas
+      ? `Se escrituran ${metros(lote.area)} y se entregan ${metros(lote.areaReal)}: ` +
+        `la subdivisión se radicó antes del movimiento de tierra, y el lote quedó ` +
+        `${metros(demas)} más grande en terreno. El folio dirá ${metros(lote.area)}.`
+      : null,
     precioTexto: pesos(precioDeLote(lote, json.precioM2)),
     precioM2Texto: pesos(json.precioM2),
     estado: lote.estado,
@@ -179,11 +195,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=db23f75d';
+    css.href = 'vendor/pannellum.css?v=4cc9b193';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=db23f75d';
+    js.src = 'vendor/pannellum.js?v=4cc9b193';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -209,6 +225,23 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     poner('.ficha-titulo', f.titulo);
     poner('.ficha-estado', f.estadoTexto);
     poner('.ficha-area', f.areaTexto);
+    poner('.ficha-area-etiqueta', f.areaEtiqueta);
+
+    // Las dos áreas y su explicación. Van juntas o no van: el número suelto
+    // sin la nota es peor que no ponerlo, porque deja al comprador creyendo
+    // que la escritura le va a decir 2.394.
+    const filaReal = dialogo.querySelector('.ficha-area-real-fila');
+    const nota = dialogo.querySelector('.ficha-nota-area');
+    if (f.areaRealTexto) {
+      poner('.ficha-area-real', f.areaRealTexto);
+      nota.textContent = f.notaArea;
+      filaReal.hidden = false;
+      nota.hidden = false;
+    } else {
+      filaReal.hidden = true;
+      nota.hidden = true;
+      nota.textContent = '';
+    }
     poner('.ficha-precio', f.precioTexto);
     poner('.ficha-precio-m2', `${f.precioM2Texto} el m²`);
     poner('.ficha-sector', `Sector ${f.sector}`);

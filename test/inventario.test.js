@@ -213,3 +213,57 @@ test('rechaza media coordenada', () => {
   const media = { ...inv, lotes: [{ n: 1, sector: 1, area: 100, estado: 'disponible', lat: 6.65 }] };
   assert.throws(() => validarInventario(media), /coordenada/);
 });
+
+// ── El área que se entrega, distinta de la que se escritura ─────────────────
+// Lote 6: la subdivisión se radicó antes del movimiento de tierra, así que la
+// escritura dice 2.140 m² y el lote en terreno mide 2.394. Se entrega completo.
+//
+// Lo que estas pruebas cuidan es que ese dato NO se cuele a ninguna de las tres
+// cosas que dependen del área escriturable: el precio, los totales del sitio y
+// los englobados de las escrituras. El día que alguien lo «arregle» poniendo
+// 2.394 en `area`, el sector 1 se pasa 254 m² de lo que dice la matriz.
+
+const conReal = (area, areaReal) => ({
+  ...inv,
+  lotes: [{ n: 1, sector: 1, area, areaReal, estado: 'disponible' }]
+});
+
+test('acepta un área entregada mayor que la escriturable', () => {
+  assert.doesNotThrow(() => validarInventario(conReal(2140, 2394)));
+});
+
+test('rechaza un área entregada que no supere a la escriturable', () => {
+  for (const malo of [2140, 2000, 0, -5]) {
+    assert.throws(() => validarInventario(conReal(2140, malo)), /areaReal/,
+      `debería rechazar areaReal=${malo}`);
+  }
+});
+
+test('rechaza un área entregada que no sea entero', () => {
+  for (const malo of [2394.5, '2394', null, {}]) {
+    assert.throws(() => validarInventario(conReal(2140, malo)), /areaReal/,
+      `debería rechazar areaReal=${JSON.stringify(malo)}`);
+  }
+});
+
+// Esta es la prueba que de verdad importa. El lote 6 declara 2.394 m² de área
+// entregada y el sitio NO puede cobrar por ellos ni contarlos en ningún total:
+// el folio va a decir 2.140 y la escritura de la matriz no da para más.
+test('el área entregada no toca el precio ni los totales', () => {
+  const seis = inv.lotes.find(l => l.n === 6);
+  assert.equal(seis.areaReal, 2394, 'el lote 6 declara el área que se entrega');
+  assert.equal(seis.area, 2140, 'y escritura la que dice el plano radicado');
+  assert.equal(precioDeLote(seis, inv.precioM2), 235400000,
+    'el precio se calcula sobre la escriturable, no sobre la entregada');
+  const r = resumenInventario(inv);
+  assert.equal(r.areaTotal, 34921, 'los totales siguen siendo los escriturables');
+  assert.equal(r.areaDisponible, 16668);
+  assert.equal(r.valorDisponible, 1833480000);
+});
+
+// El dato llega hasta la tarjeta, que es lo que se ve antes de abrir nada.
+test('los disponibles llevan el área entregada cuando la hay', () => {
+  const d = lotesDisponibles(inv);
+  assert.equal(d.find(l => l.n === 6).areaReal, 2394);
+  assert.equal(d.find(l => l.n === 7).areaReal, null, 'el 7 no declara área entregada');
+});

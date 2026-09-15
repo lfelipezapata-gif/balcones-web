@@ -352,7 +352,12 @@ dialog.ficha:not([open]) { display: none; }
   padding: .55rem 0; border-bottom: 1px solid var(--borde);
 }
 .ficha-datos dt { color: #6b6b6b; }
-.ficha-datos dd { margin: 0; font-weight: 600; text-align: right; }
+/* El valor no se parte nunca. «Área escriturable» es la etiqueta más larga de
+   la tabla y en un telefono empujaba el «2.140 m²» a dos renglones, con el
+   «m²» solo debajo del numero: parecia un error de la pagina. La etiqueta si
+   puede partirse, que para eso es la que sobra. */
+.ficha-datos dd { margin: 0; font-weight: 600; text-align: right; white-space: nowrap; }
+.ficha-datos dt { min-width: 0; }
 .ficha-precio { font-size: 1.15rem; }
 .ficha-mapa {
   display: inline-block; margin-top: 1.1rem;
@@ -1326,3 +1331,17 @@ dialog.ficha:not([open]) { display: none; }
 }
 
 }
+
+/* Las dos areas del lote 6: la que se escritura y la que se entrega. La fila
+   de «Se entregan» se destaca en verde porque es el argumento de venta, y la
+   nota debajo explica por que son distintas. Sin la nota, el comprador cree
+   que la escritura le va a decir la cifra grande. */
+.ficha-area-real-fila[hidden] { display: none; }
+.ficha-area-real { color: var(--verde); font-weight: 700; }
+.ficha-nota-area {
+  margin: .7rem 0 0; padding: .6rem .75rem;
+  background: #eef4ef; border-left: 3px solid var(--verde); border-radius: 0 8px 8px 0;
+  font-size: .85rem; color: #3f5544;
+}
+.ficha-nota-area[hidden] { display: none; }
+.tarjeta .area-real { color: var(--verde); font-weight: 600; }

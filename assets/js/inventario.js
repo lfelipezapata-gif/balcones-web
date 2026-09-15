@@ -54,6 +54,28 @@ export function validarInventario(json) {
     if (!Number.isInteger(l.area) || l.area <= 0) {
       throw new Error(`El área del lote ${l.n} no es un entero positivo.`);
     }
+    // `areaReal` es el área que se ENTREGA, distinta de la que se escritura.
+    //
+    // Pasa en el lote 6: la subdivisión se radicó antes del movimiento de
+    // tierra, así que la escritura dice 2.140 m² y el lote en terreno mide
+    // 2.394. Se entrega completo, pero el folio va a decir 2.140.
+    //
+    // Se guarda aparte y NO reemplaza a `area` a propósito. `area` es la que
+    // manda en el precio, en los englobados de las escrituras y en el plano:
+    // ninguna de esas tres puede correrse por un dato de campo. Prometer en
+    // una página de venta un área que la escritura no soporta es lo único que
+    // acá no se puede hacer.
+    if ('areaReal' in l) {
+      if (!Number.isInteger(l.areaReal) || l.areaReal <= 0) {
+        throw new Error(`El «areaReal» del lote ${l.n} no es un entero positivo.`);
+      }
+      if (l.areaReal <= l.area) {
+        throw new Error(
+          `El lote ${l.n} declara un «areaReal» de ${l.areaReal} m² que no supera ` +
+          `los ${l.area} m² escriturables. Si no hay más terreno que entregar, sobra el dato.`
+        );
+      }
+    }
     if (!ESTADOS.includes(l.estado)) {
       throw new Error(`El lote ${l.n} tiene un estado que no existe: ${l.estado}`);
     }
@@ -131,7 +153,11 @@ export function lotesDisponibles(json) {
       sector: l.sector,
       area: l.area,
       precio: precioDeLote(l, json.precioM2),
-      pano: l.pano ?? null
+      pano: l.pano ?? null,
+      // El área que se entrega, si es mayor que la escriturable. Va hasta la
+      // tarjeta porque es argumento de venta y la tarjeta es lo que se ve
+      // antes de abrir nada.
+      areaReal: (Number.isInteger(l.areaReal) && l.areaReal > l.area) ? l.areaReal : null
     }));
 }
 

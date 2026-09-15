@@ -1,6 +1,6 @@
 {
   "precioM2": 110000,
-  "actualizado": "2026-08-31",
+  "actualizado": "2026-09-15",
   "lotes": [
     {
       "n": 1,
@@ -51,6 +51,7 @@
       "n": 6,
       "sector": 1,
       "area": 2140,
+      "areaReal": 2394,
       "estado": "disponible",
       "pano": "img/pano/lote-06.jpg",
       "lat": 6.650154,
