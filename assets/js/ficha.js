@@ -7,8 +7,8 @@
 // que `validarInventario` ya deja en números y estados de una lista cerrada.
 // Por eso esta ficha puede armarse directo del inventario y aquella no.
 
-import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=3148b66a';
-import { pesos, metros } from './formato.js?v=3148b66a';
+import { validarInventario, precioDeLote, validarCasa } from './inventario.js?v=eb807eff';
+import { pesos, metros } from './formato.js?v=eb807eff';
 
 // El número de ventas. Vive acá y el pie de página de index.html lo repite;
 // una prueba comprueba que sean el mismo, que es la única forma de que no se
@@ -195,11 +195,11 @@ function cargarPannellum() {
   pannellum = new Promise((listo, falla) => {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'vendor/pannellum.css?v=3148b66a';
+    css.href = 'vendor/pannellum.css?v=eb807eff';
     document.head.appendChild(css);
 
     const js = document.createElement('script');
-    js.src = 'vendor/pannellum.js?v=3148b66a';
+    js.src = 'vendor/pannellum.js?v=eb807eff';
     js.onload = listo;
     js.onerror = () => falla(new Error('No se pudo cargar vendor/pannellum.js'));
     document.head.appendChild(js);
@@ -439,6 +439,13 @@ export function montarFicha(json, { svg, tarjetas, dialogo }) {
     for (const im of c.imagenes) {
       const fig = document.createElement('figure');
       const img = document.createElement('img');
+      // OJO: estas URL NO llevan el token de versión. Las imágenes del
+      // anteproyecto no pesan en el hash a propósito —son 26 y busteárlas todas
+      // porque cambió una obliga a rebajar megas de más—, así que el navegador
+      // las guarda por nombre y nada más. Consecuencia práctica: una imagen que
+      // cambia de contenido TIENE que cambiar de nombre. Pasó el 15-sep-2026 con
+      // el montaje del lote 7: se reemplazó el archivo dejándole el mismo nombre
+      // y quien ya había abierto la ficha seguía viendo el anterior.
       img.src = im.src;
       img.alt = im.pie;
       // Perezosas y con medidas. Son doce: sin `lazy` se bajan las doce por
