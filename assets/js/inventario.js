@@ -169,8 +169,14 @@ export function lotesDisponibles(json) {
 // Las rutas van cerradas igual que la panorámica. Estas terminan dentro de un
 // <img> y de un <video> en la página de venta: una URL de afuera cargaría
 // material de un servidor ajeno en la pestaña del cliente.
+// El sufijo detrás del número no es decoración. Ni las imágenes ni el video del
+// anteproyecto pesan en el token de versión, así que el navegador los guarda por
+// nombre: un archivo que cambia de contenido tiene que cambiar de nombre o quien
+// ya abrió la ficha se queda con el viejo. Por eso se aceptan
+// `casa-lote-7-v2.mp4` y `04-social-v2.jpg`, y por eso el manifiesto es el único
+// sitio donde se decide cuál es el vigente.
 const RUTA_IMG_CASA = /^img\/casa-lote-[0-9]{1,3}\/[a-z0-9-]+\.jpg$/;
-const RUTA_VIDEO_CASA = /^video\/casa-lote-[0-9]{1,3}\.mp4$/;
+const RUTA_VIDEO_CASA = /^video\/casa-lote-[0-9]{1,3}(-[a-z0-9]+)?\.mp4$/;
 
 export function validarCasa(casa) {
   if (!casa || typeof casa !== 'object') {

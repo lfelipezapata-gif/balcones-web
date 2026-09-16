@@ -1,9 +1,9 @@
 {
   "titulo": "Qué se puede construir acá",
-  "entrada": "Una casa de una sola planta metida en la ladera, con la cubierta convertida en terraza. Al jacuzzi se sube caminando por el pasto, sin escaleras.",
+  "entrada": "Una casa de una sola planta tallada dentro de la ladera, con la cubierta convertida en terraza. El pasto natural llega al nivel del deck: a la zona húmeda se entra de un paso desde el potrero, sin escaleras.",
   "aviso": "El lote se vende SIN construcción. Esto es un anteproyecto: una propuesta de lo que cabe acá, no una casa construida ni una obra contratada.",
-  "video": "video/casa-lote-7.mp4",
-  "poster": "img/casa-lote-7/poster.jpg",
+  "video": "video/casa-lote-7-v2.mp4",
+  "poster": "img/casa-lote-7/poster-v2.jpg",
   "duracion": "65 segundos",
   "datos": [
     [
@@ -19,8 +19,8 @@
       "de cubierta verde sobre las alcobas"
     ],
     [
-      "10,1 %",
-      "de ocupación sobre el área del lote"
+      "3,40 m",
+      "de muro de contención contra el cerro"
     ]
   ],
   "imagenes": [
@@ -29,52 +29,52 @@
       "El anteproyecto montado sobre una foto real de este lote, tomada con dron el 15 de septiembre de 2026. La casa va excavada en la ladera: el muro de contención del fondo retiene 3,40 m"
     ],
     [
-      "img/casa-lote-7/01-aerea.jpg",
+      "img/casa-lote-7/01-aerea-v2.jpg",
       "La barra metida en la ladera, con la cubierta verde sobre el ala de alcobas"
     ],
     [
-      "img/casa-lote-7/02-llegada.jpg",
+      "img/casa-lote-7/02-llegada-v2.jpg",
       "La llegada: se parquea sobre triturado, en su propia banca 3,70 m por debajo del piso"
     ],
     [
-      "img/casa-lote-7/03-barra.jpg",
-      "Una sola planta de 27 metros atravesada en el talud"
+      "img/casa-lote-7/03-barra-v2.jpg",
+      "Una sola planta de 27 metros tallada dentro del talud"
     ],
     [
-      "img/casa-lote-7/04-social.jpg",
-      "La zona social: sala, comedor y cocina de corrido contra el ventanal"
+      "img/casa-lote-7/04-social-v2.jpg",
+      "La zona social: sala, comedor y cocina de corrido contra el ventanal, con la luz cayendo de una claraboya sobre el muro del fondo"
     ],
     [
-      "img/casa-lote-7/05-chimenea.jpg",
+      "img/casa-lote-7/05-chimenea-v2.jpg",
       "La chimenea de ladrillo parte la planta en dos"
     ],
     [
-      "img/casa-lote-7/06-deck.jpg",
+      "img/casa-lote-7/06-deck-v2.jpg",
       "El comedor sale al deck de BBQ, al mismo nivel del piso interior"
     ],
     [
-      "img/casa-lote-7/07-alcoba.jpg",
+      "img/casa-lote-7/07-alcoba-v2.jpg",
       "La alcoba principal, de frente al valle"
     ],
     [
-      "img/casa-lote-7/08-pasillo.jpg",
-      "El pasillo corre pegado al vidrio y enfila las alcobas"
+      "img/casa-lote-7/08-bano-v2.jpg",
+      "El baño va enterrado contra el cerro y no tiene ventana: toda su luz baja de una claraboya"
     ],
     [
-      "img/casa-lote-7/09-acceso.jpg",
-      "A la terraza de la cubierta se llega caminando por el pasto, sin escaleras"
+      "img/casa-lote-7/09-terraza-v2.jpg",
+      "La terraza de la cubierta queda al nivel del potrero: se llega caminando por el pasto"
     ],
     [
-      "img/casa-lote-7/10-bahia.jpg",
+      "img/casa-lote-7/10-bahia-v2.jpg",
       "La zona húmeda se encierra en vidrio corredizo, porque acá hace frío"
     ],
     [
-      "img/casa-lote-7/11-noche.jpg",
-      "De noche, con la neblina afuera y el agua caliente adentro"
+      "img/casa-lote-7/11-noche-v2.jpg",
+      "De noche, con las claraboyas encendidas sobre el techo verde"
     ],
     [
-      "img/casa-lote-7/12-planta.jpg",
-      "En planta: cómo se acuesta la casa sobre el lote"
+      "img/casa-lote-7/12-planta-v2.jpg",
+      "En planta: media cubierta es potrero y la otra media es terraza"
     ]
   ]
 }
