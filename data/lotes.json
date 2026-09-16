@@ -75,7 +75,8 @@
       "estado": "disponible",
       "pano": "img/pano/lote-08.jpg",
       "lat": 6.65092,
-      "lon": -75.445623
+      "lon": -75.445623,
+      "casa": "data/casa-lote-8.json"
     },
     {
       "n": 9,

@@ -1,0 +1,80 @@
+{
+  "titulo": "Qué se puede construir acá",
+  "entrada": "Una cabaña de troncos de 8 por 18 metros sobre la terraza excavada de la parte baja del lote. El techo a dos aguas de 45 grados deja la sala abierta hasta la cumbrera, 7,20 metros, y mete un altillo completo bajo la pendiente.",
+  "aviso": "El lote se vende SIN construcción. Esto es un anteproyecto: una propuesta de lo que cabe acá, no una casa construida ni una obra contratada.",
+  "video": "video/casa-lote-8.mp4",
+  "poster": "img/casa-lote-8/poster.jpg",
+  "duracion": "62 segundos",
+  "datos": [
+    [
+      "144 m²",
+      "cubiertos en planta baja: una barra de 8 por 18 metros"
+    ],
+    [
+      "50 m²",
+      "de corredor cubierto de frente al valle"
+    ],
+    [
+      "7,20 m",
+      "del piso a la cumbrera: el altillo cabe bajo las dos aguas"
+    ],
+    [
+      "2,30 m",
+      "de zócalo de piedra: a la cabaña se sube desde el prado"
+    ]
+  ],
+  "imagenes": [
+    [
+      "img/casa-lote-8/00-montaje.jpg",
+      "El anteproyecto montado sobre una foto real de este lote, tomada con dron el 15 de septiembre de 2026. La cabaña va sobre la terraza excavada de la parte baja, a un paso del nivel de la vía"
+    ],
+    [
+      "img/casa-lote-8/01-llegada.jpg",
+      "La llegada: se parquea sobre triturado, al nivel del prado, y se sube a la cabaña por una escalera de piedra"
+    ],
+    [
+      "img/casa-lote-8/02-aerea.jpg",
+      "Una barra de 8 por 18 metros con las dos aguas a 45 grados. La chimenea de piedra corona el muro hastial"
+    ],
+    [
+      "img/casa-lote-8/03-corredor.jpg",
+      "El corredor cubierto corre los 18 metros del frente, sobre postes redondos de madera"
+    ],
+    [
+      "img/casa-lote-8/04-chimenea.jpg",
+      "La sala abre hasta la cumbrera: 7,20 metros, con la estructura de la cubierta a la vista y la chimenea de piedra de río de piso a techo"
+    ],
+    [
+      "img/casa-lote-8/05-sala.jpg",
+      "Muros de tronco redondo apilado, piso de tabla ancha y el altillo asomándose sobre la sala"
+    ],
+    [
+      "img/casa-lote-8/06-cocina.jpg",
+      "La cocina va bajo el altillo, con cielo raso bajo y las vigas a la vista: mesón de piedra y estufa de leña"
+    ],
+    [
+      "img/casa-lote-8/07-comedor.jpg",
+      "El comedor contra la ventana del valle. Por ahí se sale al corredor cubierto"
+    ],
+    [
+      "img/casa-lote-8/08-altillo.jpg",
+      "El altillo, bajo las dos aguas. En el eje hay 4 metros de alto y a 2,10 del eje ya solo quedan 1,90"
+    ],
+    [
+      "img/casa-lote-8/09-buhardilla.jpg",
+      "Cada buhardilla hace un nicho con su ventana de madera. Son la única luz directa que entra al altillo"
+    ],
+    [
+      "img/casa-lote-8/10-alcoba.jpg",
+      "La alcoba del altillo, con la cabecera contra el muro bajo y el techo inclinado encima"
+    ],
+    [
+      "img/casa-lote-8/11-adentro.jpg",
+      "Desde el corredor cubierto, mirando hacia adentro por la puerta abierta"
+    ],
+    [
+      "img/casa-lote-8/12-noche.jpg",
+      "Al anochecer, con el fuego prendido y la luz saliendo por el corredor"
+    ]
+  ]
+}
