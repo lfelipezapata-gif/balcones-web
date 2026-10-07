@@ -62,14 +62,6 @@ test('un lote que ya no está en venta no trae enlace de WhatsApp', () => {
   assert.equal(construirFichaLote(inv, 2).whatsapp, null);
 });
 
-test('el número de WhatsApp de la ficha es el mismo del pie de página', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.ok(
-    html.includes(`https://wa.me/${WHATSAPP}`),
-    `index.html no usa el número ${WHATSAPP} que usa la ficha`
-  );
-});
-
 test('pedir un lote que no existe falla con el número adentro', () => {
   assert.throws(() => construirFichaLote(inv, 99), /99/);
 });
@@ -136,18 +128,6 @@ test('Pannellum está en vendor y pesa lo que debe pesar una librería', () => {
 // Se comprueba el marcado y no el comportamiento porque el comportamiento es
 // puro DOM y CSS. Lo que esta prueba impide es que alguien borre uno de los
 // tres pedazos y deje el boton sin salida o la barra sin boton.
-test('el marcado trae los tres pedazos de la pantalla completa', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  for (const [clase, para] of [
-    ['ficha-agrandar', 'el botón que entra a pantalla completa'],
-    ['ficha-reducir', 'el botón que sale de pantalla completa'],
-    ['ficha-barra-texto', 'el lote, el área y el precio mientras se mira la vista']
-  ]) {
-    assert.ok(html.includes(`class="${clase}"`) || html.includes(`"${clase}"`),
-      `index.html no trae .${clase}: falta ${para}`);
-  }
-});
-
 // Sin `.agrandada` el <dialog> se queda del tamaño del modal y la vista no
 // crece: el boton quedaria puesto y sin efecto.
 test('el CSS define el modo agrandado del diálogo', () => {
@@ -160,16 +140,6 @@ test('el CSS define el modo agrandado del diálogo', () => {
 // ficha. Con la vista 360 vertical en un telefono queda bajo el pliegue, y el
 // momento de escribir es justo despues de mirar el lote, no dos deslizadas
 // despues.
-test('el botón de WhatsApp queda pegado al borde inferior de la ficha', () => {
-  const css = readFileSync(new URL('../assets/css/estilos.css', import.meta.url), 'utf8');
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  // El botón tiene que estar FUERA del cuerpo que se desplaza.
-  const cuerpo = html.match(/<div class="ficha-cuerpo">[\s\S]*?<\/div>\s*<a class="boton ficha-whatsapp"/);
-  assert.ok(cuerpo, 'el botón de WhatsApp quedó dentro de .ficha-cuerpo o falta el cuerpo');
-  assert.match(css, /\.ficha \{[^}]*display:\s*flex/, '.ficha tiene que ser columna');
-  assert.match(css, /\.ficha-cuerpo \{[^}]*overflow:\s*auto/, 'el cuerpo es el que se desplaza');
-});
-
 // ── El enlace al mapa ───────────────────────────────────────────────────────
 // «A 3,5 km del parque» no le dice nada a alguien que no conoce Santa Rosa.
 // El alfiler sí: abre Google Maps en el punto exacto del lote y desde ahí se
@@ -225,20 +195,6 @@ test('la ficha cerrada no se dibuja dentro de la página', () => {
 //
 // Ahora la barra lleva dos, y son dos cosas distintas: «Volver» devuelve a la
 // ficha y la X cierra todo.
-test('la vista a pantalla completa tiene con qué cerrar, no solo con qué volver', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /class="ficha-reducir"/, 'falta el botón que vuelve a la ficha');
-  assert.match(html, /class="ficha-cerrar-todo"/, 'falta el botón que cierra desde la vista grande');
-
-  const css = readFileSync(new URL('../assets/css/estilos.css', import.meta.url), 'utf8');
-  assert.match(css, /\.ficha\.agrandada \.ficha-cerrar-todo[^}]*display:\s*block/,
-    'el botón de cerrar no se muestra a pantalla completa');
-
-  const js = readFileSync(new URL('../assets/js/ficha.js', import.meta.url), 'utf8');
-  assert.match(js, /ficha-cerrar-todo[\s\S]{0,160}dialogo\.close\(\)/,
-    'el botón de cerrar de la barra no cierra el diálogo');
-});
-
 // ── El enlace directo a un lote ─────────────────────────────────────────────
 // Para que un comprador pueda mandar «mirá mi lote» y se abra el suyo, no la
 // página genérica con catorce polígonos que el familiar tiene que buscar.
@@ -293,12 +249,6 @@ test('un lote que ya no se vende no ofrece el anteproyecto', () => {
 // El contenedor tiene que existir en el documento y nacer escondido. Si no
 // está, `montarFicha` revienta al abrir el lote 6 y se lleva la ficha entera
 // —precio y botón de WhatsApp incluidos— por delante.
-test('index.html trae el contenedor del anteproyecto, escondido de nacimiento', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /<section class="ficha-casa"[^>]*hidden><\/section>/,
-    'falta el <section class="ficha-casa"> o no nace escondido');
-});
-
 // El anteproyecto ya NO vive en una página aparte. Si alguien vuelve a poner
 // un enlace que saque al cliente de la vitrina, esta prueba lo dice.
 test('la ficha no manda al cliente fuera de la vitrina', () => {
@@ -361,12 +311,6 @@ test('el video del anteproyecto pesa lo que se puede mandar por datos', () => {
 
 // La dirección de la página vieja ya circuló por WhatsApp. Un enlace reenviado
 // que dé en 404 es peor que una redirección.
-test('la dirección vieja sigue viva y lleva a la ficha', () => {
-  const vieja = readFileSync(new URL('../casa-lote-6.html', import.meta.url), 'utf8');
-  assert.match(vieja, /http-equiv="refresh"[^>]*index\.html#lote-6/);
-  assert.match(vieja, /location\.replace\('index\.html#lote-6'\)/);
-});
-
 // ── Las dos áreas del lote 6 ────────────────────────────────────────────────
 
 test('el lote 6 muestra lo que se escritura y lo que se entrega', () => {
@@ -395,9 +339,18 @@ test('un lote con una sola área no inventa la segunda fila', () => {
   assert.equal(f.notaArea, null);
 });
 
-test('index.html trae la fila y la nota del área entregada, escondidas', () => {
+
+// Desde el 7-oct-2026 la vitrina vive en la página de Urban; aquí solo quedan
+// las redirecciones (el tablero de socios sigue usando data/, assets/ y vendor/).
+test('index.html lleva a la página nueva de Urban y conserva el lote', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /class="ficha-area-real-fila" hidden/);
-  assert.match(html, /class="ficha-nota-area" hidden/);
-  assert.match(html, /class="ficha-area-etiqueta"/);
+  assert.ok(html.includes("location.replace('https://urbansas.github.io/balcones/' + location.hash)"));
+  assert.match(html, /http-equiv="refresh" content="0; url=https:\/\/urbansas\.github\.io\/balcones\/"/);
+  assert.match(html, /<meta name="robots" content="noindex">/);
+});
+
+test('la dirección vieja del lote 6 lleva a su ficha en la página nueva', () => {
+  const vieja = readFileSync(new URL('../casa-lote-6.html', import.meta.url), 'utf8');
+  assert.match(vieja, /http-equiv="refresh"[^>]*urbansas\.github\.io\/balcones\/#lote-6/);
+  assert.ok(vieja.includes("location.replace('https://urbansas.github.io/balcones/#lote-6')"));
 });
