@@ -344,13 +344,13 @@ test('un lote con una sola área no inventa la segunda fila', () => {
 // las redirecciones (el tablero de socios sigue usando data/, assets/ y vendor/).
 test('index.html lleva a la página nueva de Urban y conserva el lote', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.ok(html.includes("location.replace('https://urbansas.github.io/balcones/' + location.hash)"));
-  assert.match(html, /http-equiv="refresh" content="0; url=https:\/\/urbansas\.github\.io\/balcones\/"/);
+  assert.ok(html.includes("location.replace('https://urbansas.com.co/balcones/' + location.hash)"));
+  assert.match(html, /http-equiv="refresh" content="0; url=https:\/\/urbansas\.com\.co\/balcones\/"/);
   assert.match(html, /<meta name="robots" content="noindex">/);
 });
 
 test('la dirección vieja del lote 6 lleva a su ficha en la página nueva', () => {
   const vieja = readFileSync(new URL('../casa-lote-6.html', import.meta.url), 'utf8');
-  assert.match(vieja, /http-equiv="refresh"[^>]*urbansas\.github\.io\/balcones\/#lote-6/);
-  assert.ok(vieja.includes("location.replace('https://urbansas.github.io/balcones/#lote-6')"));
+  assert.match(vieja, /http-equiv="refresh"[^>]*urbansas\.com\.co\/balcones\/#lote-6/);
+  assert.ok(vieja.includes("location.replace('https://urbansas.com.co/balcones/#lote-6')"));
 });
