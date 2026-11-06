@@ -1,6 +1,10 @@
 name = "balcones-tablero"
 main = "src/index.js"
 compatibility_date = "2026-08-31"
+# Cuenta de Cloudflare personal, donde viven el Worker y sus secretos. Fijada
+# el 6-nov-2026: hay una segunda cuenta (la de Urban, donde está urbansas.com.co),
+# y publicar sin esto en la equivocada crearía un Worker nuevo sin SOCIOS_AUTORIZADOS.
+account_id = "3b78dfb32554488a3f15b6a195cb8a45"
 
 [vars]
 # Proyecto de Google Cloud `balcones-507302` (número 891645522580) — el mismo

@@ -1,0 +1,9 @@
+name = "tablero-urbansas-puente"
+main = "src/index.js"
+compatibility_date = "2026-08-31"
+# Cuenta de Cloudflare de Urban, donde está la zona urbansas.com.co. Ver el comentario de src/index.js.
+account_id = "64b4dc1727d4c53b46e3fbe25dc9fd0d"
+workers_dev = false
+routes = [
+  { pattern = "tablero.urbansas.com.co", custom_domain = true }
+]
