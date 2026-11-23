@@ -12,8 +12,10 @@
 // mismo dato que pinta el plano y la vitrina pública: números y estados
 // validados por `validarInventario`, sin texto libre de nadie.
 
-import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=26645d32';
-import { validarInventario, precioDeLote } from './inventario.js?v=26645d32';
+import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=98a344a8';
+import {
+  validarInventario, precioDeLote, idLote, nombreLote, porSectorYNumero, cruzaConLaCartera
+} from './inventario.js?v=98a344a8';
 
 // Los rótulos largos vienen del nombre de la fila en la hoja («Disponible»,
 // «Gastado en obra»). En la fila de seis cifras no caben y además «Disponible»
@@ -106,7 +108,19 @@ function ordenDeFecha(texto) {
   return null;
 }
 
+// Las filas de la cartera y de los abonos traen el lote como número a secas, y
+// solo pueden ser de los sectores 1 y 2 (ver `cruzaConLaCartera`): se nombran
+// «Lote 7». Un lote del inventario se nombra con `nombreLote`, que distingue el
+// Sector 3.
 const nombreDeLote = (n) => `Lote ${n}`;
+
+// La fila de la cartera de un lote del inventario. Un lote del Sector 3 no tiene
+// nunca, aunque su número coincida con uno de los sectores 1 y 2: la hoja todavía
+// no dice el sector, así que cruzarlo por el número le daría el comprador y los
+// abonos de otro lote.
+function filaDeCartera(porLote, lote) {
+  return cruzaConLaCartera(lote) ? porLote.get(lote.n) : undefined;
+}
 
 // Una fila de plata que la cartera no trajo. Se distingue del «$0» a propósito:
 // que no haya cifra no es que la cifra sea cero.
@@ -116,7 +130,7 @@ function detalleVendido(vista, inventario) {
   const porLote = new Map((vista?.cartera ?? []).map(c => [c.lote, c]));
   const lotes = [...inventario.lotes]
     .filter(l => GRUPO_DE_ESTADO[l.estado] === 'vendidos')
-    .sort((a, b) => a.n - b.n);
+    .sort(porSectorYNumero);
   const plata = sumarPlataDeLotes(lotes, porLote, 'precio');
   const enEspecie = lotes.filter(l => l.estado === 'especie').length;
 
@@ -127,11 +141,11 @@ function detalleVendido(vista, inventario) {
       { etiqueta: 'Área', numerica: true }, { etiqueta: 'Valor', numerica: true }
     ],
     filas: lotes.map(l => {
-      const c = porLote.get(l.n);
+      const c = filaDeCartera(porLote, l);
       const especie = l.estado === 'especie';
       return {
         celdas: [
-          nombreDeLote(l.n),
+          nombreLote(l),
           especie ? 'Entregado como pago en especie' : (c?.comprador || 'Sin fila en la cartera'),
           metros(l.area),
           especie || !c ? RAYA : c.precioTexto
@@ -218,7 +232,7 @@ function detallePorCobrar(vista) {
 function detalleDisponible(vista, inventario) {
   const lotes = [...inventario.lotes]
     .filter(l => GRUPO_DE_ESTADO[l.estado] === 'sinVender')
-    .sort((a, b) => a.n - b.n);
+    .sort(porSectorYNumero);
   const total = lotes.reduce((t, l) => t + precioDeLote(l, inventario.precioM2), 0);
 
   return {
@@ -228,7 +242,7 @@ function detalleDisponible(vista, inventario) {
       { etiqueta: 'Área', numerica: true }, { etiqueta: 'Valor de lista', numerica: true }
     ],
     filas: lotes.map(l => ({
-      celdas: [nombreDeLote(l.n), `Sector ${l.sector}`, metros(l.area),
+      celdas: [nombreLote(l), `Sector ${l.sector}`, metros(l.area),
         pesos(precioDeLote(l, inventario.precioM2))],
       alerta: false
     })),
@@ -345,8 +359,12 @@ export function porcentajePagado(abonado, precio) {
 
 function fichaBase(lote) {
   return {
+    id: idLote(lote),
     n: lote.n,
     numeroTexto: String(lote.n),
+    titulo: nombreLote(lote),
+    // El número grande de la ficha no dice el sector: en el Sector 3 va al lado.
+    sectorTexto: lote.sector >= 3 ? `Sector ${lote.sector}` : null,
     estado: lote.estado,
     etiqueta: ETIQUETA_ESTADO[lote.estado] ?? lote.estado,
     filas: [],
@@ -462,19 +480,21 @@ export function construirVistaLotes(vista, inventario) {
   const porLote = new Map(cartera.map(c => [c.lote, c]));
   const avisos = [];
 
-  const fichas = [...inventario.lotes].sort((a, b) => a.n - b.n).map(lote => {
-    const c = porLote.get(lote.n);
+  const conCartera = new Set();
+  const fichas = [...inventario.lotes].sort(porSectorYNumero).map(lote => {
+    const c = filaDeCartera(porLote, lote);
+    if (c) conCartera.add(idLote(lote));
 
     if (lote.estado === 'especie') {
       if (c) {
-        avisos.push(`El lote ${lote.n} figura como pago en especie en el plano y aun así trae fila en la cartera. Revisá cuál de los dos está mal.`);
+        avisos.push(`El ${nombreLote(lote)} figura como pago en especie en el plano y aun así trae fila en la cartera. Revisá cuál de los dos está mal.`);
       }
       return fichaEspecie(lote);
     }
 
     if (c) {
       if (lote.estado === 'disponible') {
-        avisos.push(`El lote ${lote.n} tiene comprador en la cartera y en data/lotes.json sigue como disponible: la vitrina pública lo está mostrando en verde.`);
+        avisos.push(`El ${nombreLote(lote)} tiene comprador en la cartera y en data/lotes.json sigue como disponible: la vitrina pública lo está mostrando en verde.`);
       }
       return fichaConCartera(lote, c);
     }
@@ -484,7 +504,9 @@ export function construirVistaLotes(vista, inventario) {
       : fichaDisponible(lote, inventario.precioM2);
   });
 
-  const enElPlano = new Set(inventario.lotes.map(l => l.n));
+  // Solo los lotes que pueden tener fila en la cartera (sectores 1 y 2): un
+  // «lote 15» de la cartera no es el lote 15 del Sector 3.
+  const enElPlano = new Set(inventario.lotes.filter(cruzaConLaCartera).map(l => l.n));
   for (const c of cartera) {
     if (!enElPlano.has(c.lote)) {
       avisos.push(`El lote ${c.lote} está en la cartera y no existe en el plano, así que no se puede abrir su ficha. Revisá data/lotes.json.`);
@@ -493,8 +515,8 @@ export function construirVistaLotes(vista, inventario) {
 
   // Al abrir arranca en el primer lote que tenga cartera: es la ficha que
   // enseña de qué se trata el panel. Si no hay ninguno, el primero del plano.
-  const conCartera = fichas.find(f => porLote.has(f.n));
-  const inicial = (conCartera ?? fichas[0])?.n ?? null;
+  const primeraConCartera = fichas.find(f => conCartera.has(f.id));
+  const inicial = (primeraConCartera ?? fichas[0])?.id ?? null;
 
   return { fichas, inicial, avisos };
 }
@@ -559,7 +581,7 @@ function sumarPlataDeLotes(lotes, porLote, campo) {
 
   for (const l of lotes) {
     if (l.estado === 'especie') continue;
-    const v = porLote.get(l.n)?.[campo];
+    const v = filaDeCartera(porLote, l)?.[campo];
     if (typeof v === 'number' && Number.isFinite(v)) {
       total += v;
       legibles++;
@@ -595,7 +617,7 @@ function baseDeGrupo(clave, lotes) {
   return {
     clave,
     etiqueta: ETIQUETA_GRUPO[clave],
-    lotes: lotes.map(l => l.n),
+    lotes: lotes.map(l => idLote(l)),
     conteo: lotes.length,
     areaTotal: areaDe(lotes)
   };
@@ -682,7 +704,7 @@ export function construirTotalesLotes(vista, inventario) {
   validarInventario(inventario);
 
   const porLote = new Map((vista?.cartera ?? []).map(c => [c.lote, c]));
-  const lotes = [...inventario.lotes].sort((a, b) => a.n - b.n);
+  const lotes = [...inventario.lotes].sort(porSectorYNumero);
   const del = (clave) => lotes.filter(l => GRUPO_DE_ESTADO[l.estado] === clave);
 
   return [

@@ -200,8 +200,27 @@ test('la ficha cerrada no se dibuja dentro de la página', () => {
 // página genérica con catorce polígonos que el familiar tiene que buscar.
 
 test('el enlace #lote-3 abre el lote 3', () => {
-  assert.equal(loteDelEnlace('#lote-3', inv), 3);
-  assert.equal(loteDelEnlace('lote-14', inv), 14);
+  // Devuelve la clave del plano (`data-lote`), que es texto: «3», no 3.
+  assert.equal(loteDelEnlace('#lote-3', inv), '3');
+  assert.equal(loteDelEnlace('lote-14', inv), '14');
+});
+
+// El Sector 3 numera del 1 al 64: «#lote-3-15» abre el 15 del Sector 3 y
+// «#lote-15» no abre nada, porque en los sectores 1 y 2 no hay lote 15.
+test('el enlace #lote-3-15 abre el lote 15 del Sector 3, no otro', () => {
+  assert.equal(loteDelEnlace('#lote-3-15', inv), '3-15');
+  assert.equal(loteDelEnlace('#lote-15', inv), null);
+  assert.equal(loteDelEnlace('#lote-3-65', inv), null);
+  const f = construirFichaLote(inv, '3-1');
+  assert.equal(f.titulo, 'Sector 3 · Lote 1');
+  assert.equal(f.sector, 3);
+  assert.match(f.notaArea, /Preventa/);
+  assert.match(decodeURIComponent(f.whatsapp), /lote 1 del sector 3/);
+  // El lote 1 de los sectores 1 y 2 sigue siendo el de siempre.
+  const uno = construirFichaLote(inv, '1');
+  assert.equal(uno.titulo, 'Lote 1');
+  assert.equal(uno.sector, 1);
+  assert.equal(uno.notaArea, null);
 });
 
 test('sin enlace, o con uno que no dice nada, no se abre nada', () => {

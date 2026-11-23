@@ -131,6 +131,518 @@
       "lat": 6.65311,
       "lon": -75.446887,
       "pano": "img/pano/lote-14.jpg"
+    },
+    {
+      "n": 1,
+      "sector": 3,
+      "area": 2301.73,
+      "estado": "disponible",
+      "lat": 6.6524,
+      "lon": -75.447339
+    },
+    {
+      "n": 2,
+      "sector": 3,
+      "area": 2352.93,
+      "estado": "disponible",
+      "lat": 6.652337,
+      "lon": -75.447656
+    },
+    {
+      "n": 3,
+      "sector": 3,
+      "area": 2065.55,
+      "estado": "disponible",
+      "lat": 6.652166,
+      "lon": -75.447977
+    },
+    {
+      "n": 4,
+      "sector": 3,
+      "area": 2174.74,
+      "estado": "disponible",
+      "lat": 6.651794,
+      "lon": -75.448128
+    },
+    {
+      "n": 5,
+      "sector": 3,
+      "area": 2054.0,
+      "estado": "disponible",
+      "lat": 6.651649,
+      "lon": -75.44782
+    },
+    {
+      "n": 6,
+      "sector": 3,
+      "area": 2293.62,
+      "estado": "disponible",
+      "lat": 6.651544,
+      "lon": -75.44829
+    },
+    {
+      "n": 7,
+      "sector": 3,
+      "area": 2173.13,
+      "estado": "disponible",
+      "lat": 6.651439,
+      "lon": -75.448548
+    },
+    {
+      "n": 8,
+      "sector": 3,
+      "area": 2089.68,
+      "estado": "disponible",
+      "lat": 6.65149,
+      "lon": -75.44897
+    },
+    {
+      "n": 9,
+      "sector": 3,
+      "area": 2086.63,
+      "estado": "disponible",
+      "lat": 6.651327,
+      "lon": -75.449286
+    },
+    {
+      "n": 10,
+      "sector": 3,
+      "area": 2092.96,
+      "estado": "disponible",
+      "lat": 6.650961,
+      "lon": -75.449454
+    },
+    {
+      "n": 11,
+      "sector": 3,
+      "area": 2512.31,
+      "estado": "disponible",
+      "lat": 6.650781,
+      "lon": -75.449138
+    },
+    {
+      "n": 12,
+      "sector": 3,
+      "area": 2373.46,
+      "estado": "disponible",
+      "lat": 6.650739,
+      "lon": -75.448796
+    },
+    {
+      "n": 13,
+      "sector": 3,
+      "area": 2483.58,
+      "estado": "disponible",
+      "lat": 6.651056,
+      "lon": -75.448696
+    },
+    {
+      "n": 14,
+      "sector": 3,
+      "area": 2263.03,
+      "estado": "disponible",
+      "lat": 6.650842,
+      "lon": -75.448188
+    },
+    {
+      "n": 15,
+      "sector": 3,
+      "area": 2049.42,
+      "estado": "disponible",
+      "lat": 6.651087,
+      "lon": -75.447987
+    },
+    {
+      "n": 16,
+      "sector": 3,
+      "area": 2054.07,
+      "estado": "disponible",
+      "lat": 6.651266,
+      "lon": -75.447676
+    },
+    {
+      "n": 17,
+      "sector": 3,
+      "area": 2648.88,
+      "estado": "disponible",
+      "lat": 6.651526,
+      "lon": -75.44732
+    },
+    {
+      "n": 18,
+      "sector": 3,
+      "area": 2328.71,
+      "estado": "disponible",
+      "lat": 6.651911,
+      "lon": -75.447161
+    },
+    {
+      "n": 19,
+      "sector": 3,
+      "area": 2053.31,
+      "estado": "disponible",
+      "lat": 6.652196,
+      "lon": -75.446892
+    },
+    {
+      "n": 20,
+      "sector": 3,
+      "area": 2054.69,
+      "estado": "disponible",
+      "lat": 6.651903,
+      "lon": -75.446623
+    },
+    {
+      "n": 21,
+      "sector": 3,
+      "area": 2127.48,
+      "estado": "disponible",
+      "lat": 6.651544,
+      "lon": -75.446813
+    },
+    {
+      "n": 22,
+      "sector": 3,
+      "area": 2085.1,
+      "estado": "disponible",
+      "lat": 6.651237,
+      "lon": -75.447039
+    },
+    {
+      "n": 23,
+      "sector": 3,
+      "area": 2269.37,
+      "estado": "disponible",
+      "lat": 6.650921,
+      "lon": -75.447225
+    },
+    {
+      "n": 24,
+      "sector": 3,
+      "area": 2613.59,
+      "estado": "disponible",
+      "lat": 6.650612,
+      "lon": -75.447388
+    },
+    {
+      "n": 25,
+      "sector": 3,
+      "area": 2538.21,
+      "estado": "disponible",
+      "lat": 6.650408,
+      "lon": -75.447629
+    },
+    {
+      "n": 26,
+      "sector": 3,
+      "area": 2535.53,
+      "estado": "disponible",
+      "lat": 6.650507,
+      "lon": -75.448101
+    },
+    {
+      "n": 27,
+      "sector": 3,
+      "area": 2387.83,
+      "estado": "disponible",
+      "lat": 6.650075,
+      "lon": -75.448112
+    },
+    {
+      "n": 28,
+      "sector": 3,
+      "area": 2251.62,
+      "estado": "disponible",
+      "lat": 6.649858,
+      "lon": -75.448274
+    },
+    {
+      "n": 29,
+      "sector": 3,
+      "area": 2090.32,
+      "estado": "disponible",
+      "lat": 6.649282,
+      "lon": -75.447897
+    },
+    {
+      "n": 30,
+      "sector": 3,
+      "area": 2086.65,
+      "estado": "disponible",
+      "lat": 6.649607,
+      "lon": -75.447806
+    },
+    {
+      "n": 31,
+      "sector": 3,
+      "area": 2051.8,
+      "estado": "disponible",
+      "lat": 6.649807,
+      "lon": -75.447629
+    },
+    {
+      "n": 32,
+      "sector": 3,
+      "area": 2103.64,
+      "estado": "disponible",
+      "lat": 6.649981,
+      "lon": -75.447457
+    },
+    {
+      "n": 33,
+      "sector": 3,
+      "area": 2149.49,
+      "estado": "disponible",
+      "lat": 6.649823,
+      "lon": -75.447008
+    },
+    {
+      "n": 34,
+      "sector": 3,
+      "area": 2070.58,
+      "estado": "disponible",
+      "lat": 6.650344,
+      "lon": -75.447164
+    },
+    {
+      "n": 35,
+      "sector": 3,
+      "area": 2091.74,
+      "estado": "disponible",
+      "lat": 6.650577,
+      "lon": -75.446925
+    },
+    {
+      "n": 36,
+      "sector": 3,
+      "area": 2054.51,
+      "estado": "disponible",
+      "lat": 6.650912,
+      "lon": -75.446675
+    },
+    {
+      "n": 37,
+      "sector": 3,
+      "area": 3044.0,
+      "estado": "disponible",
+      "lat": 6.650985,
+      "lon": -75.446224
+    },
+    {
+      "n": 38,
+      "sector": 3,
+      "area": 2060.81,
+      "estado": "disponible",
+      "lat": 6.650582,
+      "lon": -75.44643
+    },
+    {
+      "n": 39,
+      "sector": 3,
+      "area": 2087.2,
+      "estado": "disponible",
+      "lat": 6.650256,
+      "lon": -75.446671
+    },
+    {
+      "n": 40,
+      "sector": 3,
+      "area": 2056.08,
+      "estado": "disponible",
+      "lat": 6.650354,
+      "lon": -75.446132
+    },
+    {
+      "n": 41,
+      "sector": 3,
+      "area": 2058.61,
+      "estado": "disponible",
+      "lat": 6.650042,
+      "lon": -75.446022
+    },
+    {
+      "n": 42,
+      "sector": 3,
+      "area": 2082.91,
+      "estado": "disponible",
+      "lat": 6.649868,
+      "lon": -75.446515
+    },
+    {
+      "n": 43,
+      "sector": 3,
+      "area": 2162.71,
+      "estado": "disponible",
+      "lat": 6.649636,
+      "lon": -75.446675
+    },
+    {
+      "n": 44,
+      "sector": 3,
+      "area": 2642.2,
+      "estado": "disponible",
+      "lat": 6.649375,
+      "lon": -75.447171
+    },
+    {
+      "n": 45,
+      "sector": 3,
+      "area": 2074.13,
+      "estado": "disponible",
+      "lat": 6.649261,
+      "lon": -75.446788
+    },
+    {
+      "n": 46,
+      "sector": 3,
+      "area": 2052.23,
+      "estado": "disponible",
+      "lat": 6.648905,
+      "lon": -75.446707
+    },
+    {
+      "n": 47,
+      "sector": 3,
+      "area": 2093.29,
+      "estado": "disponible",
+      "lat": 6.649112,
+      "lon": -75.447626
+    },
+    {
+      "n": 48,
+      "sector": 3,
+      "area": 2060.01,
+      "estado": "disponible",
+      "lat": 6.648912,
+      "lon": -75.447372
+    },
+    {
+      "n": 49,
+      "sector": 3,
+      "area": 2185.07,
+      "estado": "disponible",
+      "lat": 6.6487,
+      "lon": -75.44708
+    },
+    {
+      "n": 50,
+      "sector": 3,
+      "area": 2962.5,
+      "estado": "disponible",
+      "lat": 6.649273,
+      "lon": -75.448519
+    },
+    {
+      "n": 51,
+      "sector": 3,
+      "area": 3413.46,
+      "estado": "disponible",
+      "lat": 6.64896,
+      "lon": -75.44815
+    },
+    {
+      "n": 52,
+      "sector": 3,
+      "area": 2441.2,
+      "estado": "disponible",
+      "lat": 6.648555,
+      "lon": -75.448214
+    },
+    {
+      "n": 53,
+      "sector": 3,
+      "area": 2791.51,
+      "estado": "disponible",
+      "lat": 6.648451,
+      "lon": -75.44866
+    },
+    {
+      "n": 54,
+      "sector": 3,
+      "area": 2259.17,
+      "estado": "disponible",
+      "lat": 6.647975,
+      "lon": -75.448652
+    },
+    {
+      "n": 55,
+      "sector": 3,
+      "area": 2425.44,
+      "estado": "disponible",
+      "lat": 6.648064,
+      "lon": -75.448199
+    },
+    {
+      "n": 56,
+      "sector": 3,
+      "area": 2068.37,
+      "estado": "disponible",
+      "lat": 6.648559,
+      "lon": -75.447732
+    },
+    {
+      "n": 57,
+      "sector": 3,
+      "area": 2370.07,
+      "estado": "disponible",
+      "lat": 6.64815,
+      "lon": -75.447753
+    },
+    {
+      "n": 58,
+      "sector": 3,
+      "area": 2051.72,
+      "estado": "disponible",
+      "lat": 6.648307,
+      "lon": -75.44735
+    },
+    {
+      "n": 59,
+      "sector": 3,
+      "area": 2055.87,
+      "estado": "disponible",
+      "lat": 6.64827,
+      "lon": -75.446966
+    },
+    {
+      "n": 60,
+      "sector": 3,
+      "area": 2100.99,
+      "estado": "disponible",
+      "lat": 6.64835,
+      "lon": -75.446526
+    },
+    {
+      "n": 61,
+      "sector": 3,
+      "area": 2249.22,
+      "estado": "disponible",
+      "lat": 6.648385,
+      "lon": -75.446146
+    },
+    {
+      "n": 62,
+      "sector": 3,
+      "area": 2331.59,
+      "estado": "disponible",
+      "lat": 6.648635,
+      "lon": -75.446007
+    },
+    {
+      "n": 63,
+      "sector": 3,
+      "area": 2058.76,
+      "estado": "disponible",
+      "lat": 6.649074,
+      "lon": -75.446037
+    },
+    {
+      "n": 64,
+      "sector": 3,
+      "area": 2073.92,
+      "estado": "disponible",
+      "lat": 6.649451,
+      "lon": -75.446042
     }
   ]
 }

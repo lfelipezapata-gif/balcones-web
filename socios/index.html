@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Balcones — Tablero de socios</title>
-<link rel="stylesheet" href="../assets/css/estilos.css?v=26645d32">
+<link rel="stylesheet" href="../assets/css/estilos.css?v=98a344a8">
 <link rel="icon" href="../img/favicon-32.png" sizes="32x32">
 <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
@@ -97,13 +97,13 @@
 </main>
 
 <script type="module">
-import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=26645d32';
-import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=26645d32';
+import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=98a344a8';
+import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=98a344a8';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   construirTotalesLotes, construirVistaCaja, construirDetalleCifra
-} from '../assets/js/paneles.js?v=26645d32';
-import { pintarMapa } from '../assets/js/mapa.js?v=26645d32';
+} from '../assets/js/paneles.js?v=98a344a8';
+import { pintarMapa } from '../assets/js/mapa.js?v=98a344a8';
 
 const $ = (id) => document.getElementById(id);
 
@@ -176,7 +176,8 @@ function pintarFicha(f) {
 
   $('ficha').innerHTML = `
     <p class="ficha-cabeza">
-      <span class="ficha-numero">${f.numeroTexto}</span>
+      <span class="ficha-numero">${f.numeroTexto}</span>${f.sectorTexto ? `
+      <span class="ficha-sector">${f.sectorTexto}</span>` : ''}
       <span class="pildora" data-estado="${f.estado}">${f.etiqueta}</span>
     </p>
     <dl class="ficha-datos">${filas}</dl>
@@ -187,13 +188,13 @@ function pintarFicha(f) {
 // entre el plano y la cartera. Va aparte del resto a propósito: si el plano
 // revienta, las cifras, los gastos y los avisos no tienen por qué caerse con él.
 async function montarPlano(vista) {
-  const inv = await (await fetch('../data/lotes.json?v=26645d32')).json();
+  const inv = await (await fetch('../data/lotes.json?v=98a344a8')).json();
 
   // El plano se inserta en el documento (no como <img>) porque el color de
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = $('mapa');
-  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=26645d32')).text();
+  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=98a344a8')).text();
   const svg = caja.querySelector('svg');
 
   // Es el MISMO archivo que usa la vitrina pública, a propósito: dos planos
@@ -215,7 +216,9 @@ async function montarPlano(vista) {
   pintarMapa(svg, inv);
 
   const { fichas, inicial, avisos } = construirVistaLotes(vista, inv);
-  const porLote = new Map(fichas.map(f => [f.n, f]));
+  // Por la clave del plano (`data-lote`): «7» en los sectores 1 y 2 y «3-15» en
+  // el Sector 3. Por el número solo, el lote 1 del Sector 3 abriría el del 1.
+  const porLote = new Map(fichas.map(f => [f.id, f]));
 
   const poligonos = [...svg.querySelectorAll('.lote[data-lote]')];
   for (const p of poligonos) {
@@ -223,11 +226,11 @@ async function montarPlano(vista) {
     p.setAttribute('role', 'button');
   }
 
-  function seleccionar(n) {
-    const f = porLote.get(n);
+  function seleccionar(id) {
+    const f = porLote.get(id);
     if (!f) return;
     for (const p of poligonos) {
-      const activo = p.dataset.lote === String(n);
+      const activo = p.dataset.lote === id;
       p.toggleAttribute('data-seleccionado', activo);
       p.setAttribute('aria-pressed', activo ? 'true' : 'false');
       const rotulo = svg.querySelector(`.rotulo-lote[data-lote="${p.dataset.lote}"]`);
@@ -238,14 +241,14 @@ async function montarPlano(vista) {
 
   svg.addEventListener('click', (e) => {
     const p = e.target.closest?.('.lote[data-lote]');
-    if (p) seleccionar(Number(p.dataset.lote));
+    if (p) seleccionar(p.dataset.lote);
   });
   svg.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const p = e.target.closest?.('.lote[data-lote]');
     if (!p) return;
     e.preventDefault();
-    seleccionar(Number(p.dataset.lote));
+    seleccionar(p.dataset.lote);
   });
 
   if (inicial !== null) seleccionar(inicial);
@@ -629,7 +632,7 @@ async function cargar(credencial) {
     const i = Number(boton.dataset.cifra);
     if (cifraAbierta === i) { cerrarDetalle(); return; }
 
-    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=26645d32')).json();
+    if (inventario === null) inventario = await (await fetch('../data/lotes.json?v=98a344a8')).json();
     const d = construirDetalleCifra(cifras[i].clave, v, inventario);
     if (!d) return;
 

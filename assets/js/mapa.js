@@ -1,5 +1,5 @@
-import { validarInventario, resumenInventario } from './inventario.js?v=26645d32';
-import { metros } from './formato.js?v=26645d32';
+import { validarInventario, resumenInventario, idLote, nombreLote, porSectorYNumero } from './inventario.js?v=98a344a8';
+import { metros } from './formato.js?v=98a344a8';
 
 // El plano de lotes se pinta desde data/lotes.json.
 //
@@ -73,14 +73,15 @@ export function construirVistaMapa(json) {
         : '.'),
     reservados: r.reservados,
     sectores,
-    lotes: [...json.lotes].sort((a, b) => a.n - b.n).map(l => ({
+    lotes: [...json.lotes].sort(porSectorYNumero).map(l => ({
+      id: idLote(l),
       n: l.n,
       estado: l.estado,
       numeroTexto: String(l.n),
       areaTexto: metros(l.area),
       marcaTexto: MARCA[l.estado] ?? '',
       // Lo que lee un lector de pantalla y lo que sale al pasar el mouse.
-      descripcion: `Lote ${l.n} · ${metros(l.area)} · ${LEIDO[l.estado]}`
+      descripcion: `${nombreLote(l)} · ${metros(l.area)} · ${LEIDO[l.estado]}`
     }))
   };
 }
@@ -94,7 +95,7 @@ export function pintarMapa(svg, json) {
   const enElPlano = new Set(
     [...svg.querySelectorAll('.lote[data-lote]')].map(p => p.dataset.lote)
   );
-  const enElDato = new Set(vista.lotes.map(l => String(l.n)));
+  const enElDato = new Set(vista.lotes.map(l => l.id));
 
   const sinPoligono = [...enElDato].filter(n => !enElPlano.has(n));
   const sinDato = [...enElPlano].filter(n => !enElDato.has(n));
@@ -116,7 +117,7 @@ export function pintarMapa(svg, json) {
   }
 
   for (const l of vista.lotes) {
-    const poligono = svg.querySelector(`.lote[data-lote="${l.n}"]`);
+    const poligono = svg.querySelector(`.lote[data-lote="${l.id}"]`);
     poligono.setAttribute('data-estado', l.estado);
     // <title> dentro del <path>: es el globo del mouse y lo que anuncia el
     // lector de pantalla. Se reutiliza si ya está, para poder repintar.
@@ -127,7 +128,7 @@ export function pintarMapa(svg, json) {
     }
     rotuloAccesible.textContent = l.descripcion;
 
-    const rotulo = svg.querySelector(`.rotulo-lote[data-lote="${l.n}"]`);
+    const rotulo = svg.querySelector(`.rotulo-lote[data-lote="${l.id}"]`);
     if (!rotulo) continue;
     rotulo.setAttribute('data-estado', l.estado);
     rotulo.querySelector('.numero').textContent = l.numeroTexto;

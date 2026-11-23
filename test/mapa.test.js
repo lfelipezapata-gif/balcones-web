@@ -14,9 +14,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { construirVistaMapa, pintarMapa } from '../assets/js/mapa.js';
+import { idLote } from '../assets/js/inventario.js';
 
 const SVG = readFileSync(new URL('../img/mapa.svg', import.meta.url), 'utf8');
-const INV = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
+const INV_TODO = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
+
+// img/mapa.svg es el plano ESQUEMÁTICO de los dos radicados del 21-sep-2026
+// (sectores 1 y 2), sacado del CAD del arquitecto por preparar-mapa.py. No tiene
+// el Sector 3 y ninguna página lo pinta ya: la vitrina pasó a urban-web y el
+// tablero de socios pinta img/mapa-aereo.svg. Sus pruebas siguen valiendo para
+// los 14 lotes que dibuja, así que corren sobre esos. El Sector 3 se prueba
+// contra el plano aéreo, al final de este archivo.
+const INV = { ...INV_TODO, lotes: INV_TODO.lotes.filter(l => l.sector <= 2) };
 
 // Englobados de las escrituras. Son la cifra contra la que tiene que cerrar
 // la suma de cada sector, y no es negociable.
@@ -218,7 +227,7 @@ function svgDeMentira(numeros) {
     querySelectorAll: () => todos.filter(t => t.clase === 'lote'),
     querySelector(sel) {
       if (sel === '#mapa-titulo') return todos.find(t => t.clase === 'mapa-titulo');
-      const m = sel.match(/^\.(lote|rotulo-lote)\[data-lote="(\d+)"\]$/);
+      const m = sel.match(/^\.(lote|rotulo-lote)\[data-lote="([\d-]+)"\]$/);
       if (m) return todos.find(t => t.clase === m[1] && t.dataset.lote === m[2]) ?? null;
       return null;   // los títulos de sector no hacen falta para esto
     }
@@ -285,4 +294,69 @@ test('el lote en especie dice VENDIDO afuera y sigue siendo especie adentro', ()
   assert.equal(dos.marcaTexto, 'VENDIDO');
   assert.match(dos.descripcion, /pago en especie/,
     'el lector de pantalla sí oye la verdad completa');
+});
+
+// ── El Sector 3 en el plano aéreo ───────────────────────────────────────────
+// img/mapa-aereo.svg es el plano que pinta el tablero de socios, y desde el
+// 23-nov-2026 trae los 64 lotes del Sector 3 (urban-web,
+// herramientas/preparar-sector3-balcones.py). La clave de cada polígono es la de
+// idLote: «7» en los sectores 1 y 2 y «3-15» en el 3. Una unidad del dibujo son
+// `data-metros-por-unidad` metros.
+const AEREO = readFileSync(new URL('../img/mapa-aereo.svg', import.meta.url), 'utf8');
+const METROS = Number(/data-metros-por-unidad="([\d.]+)"/.exec(AEREO)[1]);
+// El englobado de los 64 lotes según el plano de José Andrés del 6-nov-2026.
+const ENGLOBADO_S3 = 144326.93;
+
+function poligonosAereos() {
+  const salida = new Map();
+  const re = /<path class="lote" id="lote-([\d-]+)" data-lote="([\d-]+)" d="([^"]+)"\/>/g;
+  let m;
+  while ((m = re.exec(AEREO))) {
+    assert.equal(m[1], m[2], `el id y el data-lote del lote ${m[1]} no coinciden`);
+    const pts = m[3].slice(1, -1).split('L').map(par => par.trim().split(/\s+/).map(Number));
+    salida.set(m[2], pts);
+  }
+  return salida;
+}
+
+test('el plano aéreo tiene un polígono por lote de los tres sectores, y ninguno de más', () => {
+  const enElPlano = [...poligonosAereos().keys()].sort();
+  const enElDato = INV_TODO.lotes.map(idLote).sort();
+  assert.equal(enElDato.length, 78);
+  assert.deepEqual(enElPlano, enElDato);
+});
+
+test('cada lote del Sector 3 en el plano aéreo encierra el área del inventario', () => {
+  const polis = poligonosAereos();
+  const s3 = INV_TODO.lotes.filter(l => l.sector === 3);
+  const fuera = [];
+  let suma = 0;
+  for (const l of s3) {
+    const m2 = area(polis.get(idLote(l))) * METROS * METROS;
+    suma += m2;
+    const error = Math.abs(m2 - l.area) / l.area;
+    if (error > TOLERANCIA) fuera.push(`${idLote(l)}: ${m2.toFixed(1)} m² contra ${l.area} m²`);
+  }
+  assert.deepEqual(fuera, [], 'El plano aéreo no cuadra con el inventario:\n  ' + fuera.join('\n  '));
+  assert.ok(Math.abs(suma - ENGLOBADO_S3) / ENGLOBADO_S3 <= TOLERANCIA,
+    `el Sector 3 suma ${suma.toFixed(0)} m² en el plano aéreo y el plano dice ${ENGLOBADO_S3} m²`);
+});
+
+test('el lote 1 del Sector 3 se pinta por su cuenta, no como el lote 1 del sector 1', () => {
+  const svg = svgDeMentira(INV_TODO.lotes.map(idLote));
+  globalThis.document = { createElementNS: () => ({ textContent: '' }) };
+  let vista;
+  try {
+    vista = pintarMapa(svg, INV_TODO);
+  } finally {
+    delete globalThis.document;
+  }
+  const poligono = (id) => svg.todos.find(t => t.clase === 'lote' && t.dataset.lote === id);
+  assert.equal(poligono('1').atributos['data-estado'], 'vendido');
+  assert.equal(poligono('3-1').atributos['data-estado'], 'disponible');
+  assert.deepEqual(vista.sectores.map(s => s.texto),
+    ['Sector 1 · lotes 1 a 11', 'Sector 2 · lotes 12 a 14', 'Sector 3 · lotes 1 a 64']);
+  const tres = vista.lotes.find(l => l.id === '3-1');
+  assert.equal(tres.numeroTexto, '1');
+  assert.match(tres.descripcion, /^Sector 3 · Lote 1 · 2\.302 m² · disponible$/);
 });

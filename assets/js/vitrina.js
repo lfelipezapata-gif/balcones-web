@@ -1,5 +1,5 @@
-import { resumenInventario, lotesDisponibles } from './inventario.js?v=26645d32';
-import { pesos, metros } from './formato.js?v=26645d32';
+import { resumenInventario, lotesDisponibles } from './inventario.js?v=98a344a8';
+import { pesos, metros } from './formato.js?v=98a344a8';
 
 // Lo que se lee ARRIBA del plano, antes de verlo.
 //
@@ -42,6 +42,8 @@ export function construirVistaVitrina(json) {
                `— precio de apertura de la primera etapa`,
     pista: construirPista(disponibles),
     tarjetas: disponibles.map(l => ({
+      id: l.id,
+      nombre: l.nombre,
       n: l.n,
       sector: l.sector,
       area: l.area,

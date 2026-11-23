@@ -17,7 +17,11 @@ import {
   mencionaVencido, porcentajePagado
 } from '../assets/js/paneles.js';
 
-const INV = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
+const INV_TODO = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url), 'utf8'));
+// Casi todo este archivo prueba la cartera, que solo existe para los sectores 1
+// y 2 (lotes 1 a 14): esas pruebas corren sobre ellos, con sus cifras de
+// siempre. El Sector 3 tiene sus pruebas al final, con el inventario entero.
+const INV = { ...INV_TODO, lotes: INV_TODO.lotes.filter(l => l.sector <= 2) };
 const AHORA = new Date('2026-08-31T22:00:00.000Z');
 
 // Datos inventados, con nombres que no existen. Los números son de juguete.
@@ -226,7 +230,7 @@ test('hay una ficha por lote del plano y arranca en el primero con cartera', () 
   const v = construirVistaLotes(vistaDe(), INV);
   assert.equal(v.fichas.length, INV.lotes.length);
   assert.deepEqual(v.fichas.map(f => f.n), INV.lotes.map(l => l.n).sort((a, b) => a - b));
-  assert.equal(v.inicial, 1);
+  assert.equal(v.inicial, '1');
   assert.deepEqual(v.avisos, []);
 });
 
@@ -314,7 +318,8 @@ test('un lote en especie que aparece en la cartera se avisa y sigue sin mostrar 
 test('sin cartera el panel igual arma las catorce fichas y elige la primera', () => {
   const v = construirVistaLotes(vistaDe({ ...TABLERO, cartera: [] }), INV);
   assert.equal(v.fichas.length, INV.lotes.length);
-  assert.equal(v.inicial, 1);
+  // La clave del plano (`data-lote`), que es texto.
+  assert.equal(v.inicial, '1');
 });
 
 // ---- inyección desde la hoja -------------------------------------------
@@ -403,7 +408,8 @@ test('«Todos» se queda como está hoy: todos los lotes y ningún resumen', () 
   assert.deepEqual(por.todos.cifras, []);
   assert.equal(por.todos.nota, null);
   assert.equal(por.todos.conteo, INV.lotes.length);
-  assert.deepEqual(por.todos.lotes, INV.lotes.map(l => l.n).sort((a, b) => a - b));
+  // Las claves del plano (`data-lote`): «7» en los sectores 1 y 2.
+  assert.deepEqual(por.todos.lotes, INV.lotes.map(l => l.n).sort((a, b) => a - b).map(String));
 });
 
 test('cada lote del plano cae en un grupo y en uno solo', () => {
@@ -432,8 +438,8 @@ test('el grupo «Colocados» cuenta el lote en especie, con su área', () => {
   const c = cifrasPorEtiqueta(por.vendidos);
   // Los seis con cartera más el lote en especie, que ya tiene dueño.
   assert.equal(por.vendidos.conteo, 7);
-  assert.ok(por.vendidos.lotes.includes(2), 'el lote en especie no está sin vender');
-  assert.equal(por.sinVender.lotes.includes(2), false);
+  assert.ok(por.vendidos.lotes.includes('2'), 'el lote en especie no está sin vender');
+  assert.equal(por.sinVender.lotes.includes('2'), false);
   assert.equal(por.vendidos.areaTotal, 18253);
   assert.equal(c.Lotes.texto, '7');
   assert.equal(c['Área'].texto, '18.253 m²');
@@ -1528,4 +1534,77 @@ test('el texto de un pago sale escapado, no interpretado', () => {
   for (const t of [f.pagos[0].fecha, f.pagos[0].medio]) {
     assert.doesNotMatch(t, /<img/, `salió sin escapar: ${t}`);
   }
+});
+
+// ── El Sector 3 y la cartera ───────────────────────────────────────────────
+// La hoja todavía manda el lote de la cartera y de los abonos como un número a
+// secas, sin sector (worker/src/sheets.js). El Sector 3 numera del 1 al 64, así
+// que su lote 1 tiene el mismo número que el lote 1 del sector 1, el de César.
+// Si el tablero cruzara por el número, el lote 1 del Sector 3 saldría con el
+// comprador, los abonos y el saldo de César. Estas pruebas lo impiden.
+const CESAR = {
+  lote: 1, area: 2754, comprador: 'César de prueba',
+  precio: 300000000, abonado: 30000000, saldo: 270000000,
+  proximaCuotaFecha: '27 de febrero de 2027', proximaCuotaValor: 54000000,
+  estado: 'Vendido',
+  abonos: [{ fecha: '2026-08-30', valor: 30000000, medio: 'Transferencia' }]
+};
+const CON_CESAR = { ...TABLERO, cartera: [CESAR] };
+
+test('el lote 1 del Sector 3 no recibe el comprador ni los abonos de César', () => {
+  const v = construirVistaLotes(vistaDe(CON_CESAR), INV_TODO);
+  const cesar = v.fichas.find(f => f.id === '1');
+  const tres = v.fichas.find(f => f.id === '3-1');
+
+  // César sigue en su lote, con su plata.
+  assert.equal(cesar.etiqueta, 'Vendido');
+  assert.ok(cesar.filas.some(x => x.valor === 'César de prueba'));
+  assert.equal(cesar.pagos.length, 1);
+
+  // El lote 1 del Sector 3 es otro lote: disponible, sin comprador, sin pagos.
+  assert.equal(tres.titulo, 'Sector 3 · Lote 1');
+  assert.equal(tres.sectorTexto, 'Sector 3');
+  assert.equal(tres.etiqueta, 'Disponible');
+  assert.equal(tres.pagos.length, 0);
+  assert.equal(tres.calendario, null);
+  assert.ok(!tres.filas.some(x => /César/.test(x.valor)), 'no trae el nombre de César');
+  assert.ok(tres.filas.some(x => x.etiqueta === 'Precio de lista' && x.valor === '$253.190.300'));
+
+  // Y no se levanta el aviso de «tiene comprador y sigue disponible»: la fila
+  // de César no es de ese lote.
+  assert.deepEqual(v.avisos, []);
+  assert.equal(v.inicial, '1', 'arranca en el lote de César, no en el del Sector 3');
+});
+
+test('una fila de la cartera con un número que solo existe en el Sector 3 se avisa, no se cruza', () => {
+  // El lote 15 solo existe en el Sector 3. Mientras la hoja no diga el sector,
+  // una fila «15» no se le puede pegar: se avisa como lote que no está en el plano.
+  const v = construirVistaLotes(vistaDe({ ...TABLERO, cartera: [{ ...CESAR, lote: 15 }] }), INV_TODO);
+  assert.equal(v.fichas.find(f => f.id === '3-15').etiqueta, 'Disponible');
+  assert.equal(v.avisos.length, 1);
+  assert.match(v.avisos[0], /lote 15 está en la cartera y no existe en el plano/);
+});
+
+test('los colocados no le suman al Sector 3 la plata de César', () => {
+  const { por } = (() => {
+    const lista = construirTotalesLotes(vistaDe(CON_CESAR), INV_TODO);
+    return { por: Object.fromEntries(lista.map(g => [g.clave, g])) };
+  })();
+  assert.ok(por.sinVender.lotes.includes('3-1'));
+  assert.equal(por.vendidos.lotes.includes('3-1'), false);
+  assert.equal(por.sinVender.conteo, 71);
+  const valor = por.sinVender.cifras.find(c => c.etiqueta === 'Valor de lista').texto;
+  assert.equal(valor, '$17.709.442.300');
+});
+
+test('el listado de «Inventario» trae el Sector 3 con su nombre y cuadra con la hoja', () => {
+  const d = construirDetalleCifra('disponible', vistaDe(CON_CESAR), INV_TODO);
+  assert.equal(d.filas.length, 71);
+  const s3 = d.filas.filter(f => f.celdas[1] === 'Sector 3');
+  assert.equal(s3.length, 64);
+  assert.equal(s3[0].celdas[0], 'Sector 3 · Lote 1');
+  assert.equal(s3[14].celdas[0], 'Sector 3 · Lote 15');
+  assert.equal(s3[14].celdas[3], '$225.436.200');
+  // Lo mismo que suma la fila «Disponible» de la hoja con el Sector 3 adentro.
+  assert.equal(d.pie.valor, '$17.709.442.300');
 });

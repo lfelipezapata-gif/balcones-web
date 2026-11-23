@@ -2,24 +2,51 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import {
-  validarInventario, validarCasa, precioDeLote, resumenInventario, lotesDisponibles, ESTADOS
+  validarInventario, validarCasa, precioDeLote, resumenInventario, lotesDisponibles, ESTADOS,
+  idLote, nombreLote
 } from '../assets/js/inventario.js';
 
 const inv = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url)));
+
+// Los sectores 1 y 2 (lotes 1 a 14, plano radicado el 21-sep-2026) y el Sector 3
+// (lotes 1 a 64, plano de José Andrés del 6-nov-2026, radicado el 20-nov-2026).
+// Las cifras de siempre se prueban sobre los dos primeros; el 3 tiene las suyas.
+const s12 = { ...inv, lotes: inv.lotes.filter(l => l.sector <= 2) };
+const s3 = { ...inv, lotes: inv.lotes.filter(l => l.sector === 3) };
+const lote = (sector, n) => inv.lotes.find(l => l.sector === sector && l.n === n);
+// Las áreas del Sector 3 traen centésimas: las sumas se comparan redondeadas.
+const r2 = (x) => Math.round(x * 100) / 100;
 
 test('el inventario es válido', () => {
   assert.doesNotThrow(() => validarInventario(inv));
 });
 
-test('las 14 áreas suman 34.921 m²', () => {
-  assert.equal(resumenInventario(inv).areaTotal, 34921);
+test('las 14 áreas de los sectores 1 y 2 suman 34.921 m²', () => {
+  assert.equal(resumenInventario(s12).areaTotal, 34921);
 });
 
-test('los disponibles suman 16.668 m² y valen 1.833.480.000', () => {
-  const r = resumenInventario(inv);
+// El englobado del Sector 3 según el plano de José Andrés del 6-nov-2026: los
+// 64 lotes sin vías ni parque. El 37 no traía área escrita y va con la medida.
+test('los 64 lotes del Sector 3 suman 144.326,93 m²', () => {
+  assert.equal(s3.lotes.length, 64);
+  assert.equal(r2(resumenInventario(s3).areaTotal), 144326.93);
+  assert.equal(r2(resumenInventario(inv).areaTotal), 179247.93);
+});
+
+test('los disponibles suman 16.668 m² y valen 1.833.480.000 en los sectores 1 y 2', () => {
+  const r = resumenInventario(s12);
   assert.equal(r.disponibles, 7);
   assert.equal(r.areaDisponible, 16668);
   assert.equal(r.valorDisponible, 1833480000);
+});
+
+test('el Sector 3 sale entero a la venta y vale 15.875.962.300 a precio de lista', () => {
+  const r = resumenInventario(s3);
+  assert.equal(r.disponibles, 64);
+  assert.equal(r.valorDisponible, 15875962300);
+  const todo = resumenInventario(inv);
+  assert.equal(todo.disponibles, 71);
+  assert.equal(todo.valorDisponible, 1833480000 + 15875962300);
 });
 
 // El lote 12 estuvo reservado unas horas el 2-sep-2026 y volvió a la venta el
@@ -28,10 +55,11 @@ test('los disponibles suman 16.668 m² y valen 1.833.480.000', () => {
 test('hoy no hay ningún lote reservado', () => {
   const r = resumenInventario(inv);
   assert.equal(r.reservados, 0);
-  assert.equal(inv.lotes.find(l => l.n === 12).estado, 'disponible');
+  assert.equal(lote(2, 12).estado, 'disponible');
 });
 
 test('los colocados suman 18.253 m² y los vendidos 15.507 m²', () => {
+  // Todos son de los sectores 1 y 2: el Sector 3 no ha vendido nada.
   const r = resumenInventario(inv);
   assert.equal(r.colocados, 7);
   assert.equal(r.areaColocada, 18253);
@@ -40,20 +68,46 @@ test('los colocados suman 18.253 m² y los vendidos 15.507 m²', () => {
 });
 
 test('el precio se calcula, nunca se lee del archivo', () => {
-  const lote12 = inv.lotes.find(l => l.n === 12);
+  const lote12 = lote(2, 12);
   assert.equal(precioDeLote(lote12, inv.precioM2), 303600000);
   assert.equal('precio' in lote12, false);
+  // Con centésimas el precio sale al peso, sin ruido de coma flotante.
+  assert.equal(precioDeLote(lote(3, 15), inv.precioM2), 225436200);
 });
 
 test('los disponibles salen ordenados y con su precio calculado', () => {
   const d = lotesDisponibles(inv);
   assert.equal(d[0].n, 6);
-  assert.equal(d.find(l => l.n === 7).precio, 234190000);
+  assert.equal(d.find(l => l.id === '7').precio, 234190000);
+  // Primero los sectores 1 y 2, después el 3 en orden.
+  assert.equal(d.length, 71);
+  assert.equal(d[7].id, '3-1');
+  assert.equal(d[7].nombre, 'Sector 3 · Lote 1');
+  assert.equal(d.at(-1).id, '3-64');
 });
 
-test('los números van del 1 al 14 sin huecos ni repetidos', () => {
-  const ns = inv.lotes.map(l => l.n).sort((a, b) => a - b);
-  assert.deepEqual(ns, Array.from({ length: 14 }, (_, i) => i + 1));
+test('los números van del 1 al 14 en los sectores 1 y 2 y del 1 al 64 en el 3', () => {
+  const ns = (ls) => ls.map(l => l.n).sort((a, b) => a - b);
+  assert.deepEqual(ns(s12.lotes), Array.from({ length: 14 }, (_, i) => i + 1));
+  assert.deepEqual(ns(s3.lotes), Array.from({ length: 64 }, (_, i) => i + 1));
+});
+
+// La clave es sector + número: el lote 1 del sector 1 y el 1 del Sector 3 son
+// dos lotes, pero dos «1» del Sector 3 son un repetido.
+test('un lote repetido se mira por sector y número', () => {
+  const uno = { n: 1, sector: 1, area: 100, estado: 'vendido' };
+  const tres = { n: 1, sector: 3, area: 100, estado: 'disponible' };
+  assert.doesNotThrow(() => validarInventario({ ...inv, lotes: [uno, tres] }));
+  assert.throws(() => validarInventario({ ...inv, lotes: [uno, tres, { ...tres }] }), /repetido/);
+  assert.equal(idLote(uno), '1');
+  assert.equal(idLote(tres), '3-1');
+  assert.equal(nombreLote(tres), 'Sector 3 · Lote 1');
+});
+
+test('el área acepta centésimas, no más', () => {
+  const con = (area) => ({ ...inv, lotes: [{ n: 1, sector: 3, area, estado: 'disponible' }] });
+  assert.doesNotThrow(() => validarInventario(con(2049.42)));
+  assert.throws(() => validarInventario(con(2049.421)), /área/);
 });
 
 test('rechaza un estado inválido', () => {
@@ -201,10 +255,10 @@ test('un lote reservado no aparece entre los que se pueden pedir', () => {
 // Los tres grupos tienen que repartirse los 14 lotes sin dejar ninguno afuera
 // ni contar ninguno dos veces. Es la cuenta que se rompe cuando alguien agrega
 // un estado y se olvida de meterlo en algún grupo del resumen.
-test('disponibles, reservados y colocados se reparten los 14 lotes', () => {
+test('disponibles, reservados y colocados se reparten todos los lotes', () => {
   const r = resumenInventario(inv);
   assert.equal(r.disponibles + r.reservados + r.colocados, inv.lotes.length);
-  assert.equal(r.areaDisponible + r.areaReservada + r.areaColocada, r.areaTotal);
+  assert.equal(r2(r.areaDisponible + r.areaReservada + r.areaColocada), r2(r.areaTotal));
 });
 
 // ── Las coordenadas del lote ────────────────────────────────────────────────
@@ -269,12 +323,12 @@ test('rechaza un área entregada que no sea entero', () => {
 // entregada y el sitio NO puede cobrar por ellos ni contarlos en ningún total:
 // el folio va a decir 2.140 y la escritura de la matriz no da para más.
 test('el área entregada no toca el precio ni los totales', () => {
-  const seis = inv.lotes.find(l => l.n === 6);
+  const seis = lote(1, 6);
   assert.equal(seis.areaReal, 2394, 'el lote 6 declara el área que se entrega');
   assert.equal(seis.area, 2140, 'y escritura la que dice el plano radicado');
   assert.equal(precioDeLote(seis, inv.precioM2), 235400000,
     'el precio se calcula sobre la escriturable, no sobre la entregada');
-  const r = resumenInventario(inv);
+  const r = resumenInventario(s12);
   assert.equal(r.areaTotal, 34921, 'los totales siguen siendo los escriturables');
   assert.equal(r.areaDisponible, 16668);
   assert.equal(r.valorDisponible, 1833480000);
@@ -283,6 +337,6 @@ test('el área entregada no toca el precio ni los totales', () => {
 // El dato llega hasta la tarjeta, que es lo que se ve antes de abrir nada.
 test('los disponibles llevan el área entregada cuando la hay', () => {
   const d = lotesDisponibles(inv);
-  assert.equal(d.find(l => l.n === 6).areaReal, 2394);
-  assert.equal(d.find(l => l.n === 7).areaReal, null, 'el 7 no declara área entregada');
+  assert.equal(d.find(l => l.id === '6').areaReal, 2394);
+  assert.equal(d.find(l => l.id === '7').areaReal, null, 'el 7 no declara área entregada');
 });

@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { construirVistaVitrina } from '../assets/js/vitrina.js';
 
-const inv = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url)));
+const todo = JSON.parse(readFileSync(new URL('../data/lotes.json', import.meta.url)));
+// Esta vitrina ya no se publica: index.html redirige a urbansas.com.co/balcones/,
+// que tiene la suya (urban-web) con el Sector 3. Sus pruebas siguen con los 14
+// lotes de los sectores 1 y 2, que es lo que la vitrina vieja sabía mostrar.
+const inv = { ...todo, lotes: todo.lotes.filter(l => l.sector <= 2) };
 
 test('el titular sale del inventario, no está escrito a mano', () => {
   const v = construirVistaVitrina(inv);
