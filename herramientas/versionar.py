@@ -51,6 +51,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 FIJOS = [
     "assets/css/estilos.css",
     "assets/js/config.js",
+    "assets/js/estados.js",
     "assets/js/ficha.js",
     "assets/js/formato.js",
     "assets/js/inventario.js",
@@ -74,7 +75,7 @@ ESCRIBIR_EN = ["index.html", "img/mapa-aereo.svg",
                "assets/js/ficha.js", "assets/js/vitrina.js",
                "assets/js/mapa.js", "assets/js/tablero.js",
                "assets/js/paneles.js", "assets/js/inventario.js",
-               "socios/index.html"]
+               "assets/js/estados.js", "socios/index.html"]
 
 VERSION = re.compile(r"\?v=[0-9a-f]{8}")
 
