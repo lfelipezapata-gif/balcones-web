@@ -6,12 +6,13 @@
 //
 // Por qué un puente y no mover el Worker: urbansas.com.co vive en la cuenta de
 // Cloudflare de Urban, y el Worker con sus secretos (SOCIOS_AUTORIZADOS y la
-// cuenta de servicio de Google) vive en la cuenta personal. Un dominio propio
+// cuenta de servicio de Google) vive en la del Consorcio Balcones (desde el
+// 25-nov-2026; antes, en la personal). Un dominio propio
 // solo se le puede colgar a un Worker de la misma cuenta. El puente no guarda
 // nada ni decide nada: reenvía método, ruta, encabezados (incluida la
 // credencial de Google y el Origin) y cuerpo, y devuelve la respuesta tal cual,
 // con los encabezados CORS que pone el Worker de verdad.
-export const DESTINO = 'https://balcones-tablero.lfelipezapata.workers.dev';
+export const DESTINO = 'https://balcones-tablero.consorciobalconessro.workers.dev';
 
 export default {
   async fetch(request, env, ctx, { fetchImpl = fetch } = {}) {

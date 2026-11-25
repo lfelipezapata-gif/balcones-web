@@ -1,10 +1,14 @@
 name = "balcones-tablero"
 main = "src/index.js"
 compatibility_date = "2026-08-31"
-# Cuenta de Cloudflare personal, donde viven el Worker y sus secretos. Fijada
-# el 6-nov-2026: hay una segunda cuenta (la de Urban, donde está urbansas.com.co),
-# y publicar sin esto en la equivocada crearía un Worker nuevo sin SOCIOS_AUTORIZADOS.
-account_id = "3b78dfb32554488a3f15b6a195cb8a45"
+# Cuenta de Cloudflare del Consorcio Balcones, donde viven el Worker y sus
+# secretos desde el 25-nov-2026, por decisión de él. Antes estaba en la cuenta
+# personal (3b78dfb3…). Hay una tercera
+# cuenta, la de Urban, donde está urbansas.com.co y el puente: publicar sin esto en
+# la equivocada crearía un Worker nuevo sin SOCIOS_AUTORIZADOS.
+# Publicar: XDG_CONFIG_HOME=~/.config/cf-personal npx wrangler deploy (sesión aparte
+# de la de Urban, que es la que usa wrangler por defecto en este Mac).
+account_id = "9f41e2d64f6b6890c38e338a3179b1be"
 
 [vars]
 # Proyecto de Google Cloud `balcones-507302` (número 891645522580) — el mismo
