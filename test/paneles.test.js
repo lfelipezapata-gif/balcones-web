@@ -1537,11 +1537,11 @@ test('el texto de un pago sale escapado, no interpretado', () => {
 });
 
 // ── El Sector 3 y la cartera ───────────────────────────────────────────────
-// La hoja todavía manda el lote de la cartera y de los abonos como un número a
-// secas, sin sector (worker/src/sheets.js). El Sector 3 numera del 1 al 64, así
-// que su lote 1 tiene el mismo número que el lote 1 del sector 1, el de César.
-// Si el tablero cruzara por el número, el lote 1 del Sector 3 saldría con el
-// comprador, los abonos y el saldo de César. Estas pruebas lo impiden.
+// El Sector 3 numera del 1 al 64, así que su lote 1 tiene el mismo número que el
+// lote 1 del sector 1, el de César. Desde el 25-nov-2026 el Worker manda el sector
+// y la clave (`id`) de cada fila; una fila sin `id` es de un Worker anterior y
+// solo puede ser de los sectores 1 y 2. Si el tablero cruzara por el número, el
+// lote 1 del Sector 3 saldría con el comprador, los abonos y el saldo de César.
 const CESAR = {
   lote: 1, area: 2754, comprador: 'César de prueba',
   precio: 300000000, abonado: 30000000, saldo: 270000000,
@@ -1576,13 +1576,58 @@ test('el lote 1 del Sector 3 no recibe el comprador ni los abonos de César', ()
   assert.equal(v.inicial, '1', 'arranca en el lote de César, no en el del Sector 3');
 });
 
-test('una fila de la cartera con un número que solo existe en el Sector 3 se avisa, no se cruza', () => {
-  // El lote 15 solo existe en el Sector 3. Mientras la hoja no diga el sector,
-  // una fila «15» no se le puede pegar: se avisa como lote que no está en el plano.
+test('una fila de la cartera sin sector con un número que solo existe en el Sector 3 se avisa, no se cruza', () => {
+  // El lote 15 solo existe en el Sector 3. Una fila «15» sin sector no se le puede
+  // pegar: se avisa como lote que no está en el plano.
   const v = construirVistaLotes(vistaDe({ ...TABLERO, cartera: [{ ...CESAR, lote: 15 }] }), INV_TODO);
   assert.equal(v.fichas.find(f => f.id === '3-15').etiqueta, 'Disponible');
   assert.equal(v.avisos.length, 1);
-  assert.match(v.avisos[0], /lote 15 está en la cartera y no existe en el plano/);
+  assert.match(v.avisos[0], /El Lote 15 está en la cartera y no existe en el plano/);
+});
+
+// Una venta del Sector 3 tal como la manda el Worker desde el 25-nov-2026.
+const TRES_UNO = {
+  lote: 1, sector: 3, id: '3-1', area: 2301.73, comprador: 'Comprador del Sector 3',
+  precio: 220000000, abonado: 20000000, saldo: 200000000,
+  proximaCuotaFecha: '25 de enero de 2027', proximaCuotaValor: 100000000,
+  estado: 'Vendido', promesa: '25/11/2026',
+  abonos: [{ fecha: '25/11/2026', valor: 20000000, medio: 'Consignación' }]
+};
+const CON_LOS_DOS = { ...TABLERO, cartera: [{ ...CESAR, sector: 1, id: '1' }, TRES_UNO] };
+const INV_TRES_UNO_VENDIDO = { ...INV_TODO, lotes: INV_TODO.lotes.map(l => (l.sector === 3 && l.n === 1 ? { ...l, estado: 'vendido' } : l)) };
+
+test('una venta del Sector 3 llega a SU ficha y César sigue en la suya', () => {
+  const v = construirVistaLotes(vistaDe(CON_LOS_DOS), INV_TRES_UNO_VENDIDO);
+  const cesar = v.fichas.find(f => f.id === '1');
+  const tres = v.fichas.find(f => f.id === '3-1');
+  assert.ok(cesar.filas.some(x => x.valor === 'César de prueba'));
+  assert.ok(!cesar.filas.some(x => /Sector 3/.test(x.valor)));
+  assert.equal(cesar.pagos.length, 1);
+  assert.equal(tres.titulo, 'Sector 3 · Lote 1');
+  assert.ok(tres.filas.some(x => x.valor === 'Comprador del Sector 3'));
+  assert.ok(!tres.filas.some(x => /César/.test(x.valor)));
+  assert.equal(tres.pagos.length, 1);
+  assert.deepEqual(v.avisos, []);
+});
+
+test('los colocados del Sector 3 suman su propia plata, no la de César', () => {
+  const lista = construirTotalesLotes(vistaDe(CON_LOS_DOS), INV_TRES_UNO_VENDIDO);
+  const por = Object.fromEntries(lista.map(g => [g.clave, g]));
+  assert.ok(por.vendidos.lotes.includes('3-1'));
+  assert.ok(por.vendidos.lotes.includes('1'));
+  assert.equal(por.sinVender.conteo, 70);
+});
+
+test('los listados de abonos y de lo por cobrar nombran el lote con su sector', () => {
+  const abonos = construirDetalleCifra('abonado', vistaDe(CON_LOS_DOS), INV_TRES_UNO_VENDIDO);
+  assert.deepEqual(abonos.filas.map(f => f.celdas[1]).sort(), ['Lote 1', 'Sector 3 · Lote 1']);
+  const saldo = construirDetalleCifra('porCobrar', vistaDe(CON_LOS_DOS), INV_TRES_UNO_VENDIDO);
+  assert.deepEqual(saldo.filas.map(f => f.celdas[0]), ['Lote 1', 'Sector 3 · Lote 1']);
+});
+
+test('una fila del Sector 3 cuyo lote no está en el plano se avisa con su nombre completo', () => {
+  const v = construirVistaLotes(vistaDe({ ...TABLERO, cartera: [{ ...TRES_UNO, lote: 99, id: '3-99' }] }), INV_TODO);
+  assert.deepEqual(v.avisos, ['El Sector 3 · Lote 99 está en la cartera y no existe en el plano, así que no se puede abrir su ficha. Revisá data/lotes.json.']);
 });
 
 test('los colocados no le suman al Sector 3 la plata de César', () => {

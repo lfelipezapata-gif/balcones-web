@@ -240,6 +240,21 @@ const COLUMNA_CONCEPTO_CAJA = 0;
 const COLUMNA_VALOR_CAJA = 1;
 const COLUMNA_TIPO_CAJA = 2;
 
+// El sector de cada venta y de cada abono (desde el 25-nov-2026). El Sector 3
+// numera sus lotes del 1 al 64 y los sectores 1 y 2 del 1 al 14, así que el
+// número solo no dice de qué lote es: el lote 1 del Sector 3 no es el de César.
+// «Tablero Cartera» lo trae en la columna K (sale de VENTAS!C) y «Tablero Abonos»
+// en la E (sale de ABONOS!F). Vacío es «sectores 1 y 2», como en todas las filas
+// anteriores al Sector 3; por eso una hoja sin esas columnas sigue funcionando.
+const COLUMNA_SECTOR_CARTERA = 10;
+const COLUMNA_SECTOR_ABONOS = 4;
+
+// La clave de un lote, con la misma regla de `idLote` (assets/js/inventario.js):
+// «3-15» en el Sector 3 y el número a secas en los sectores 1 y 2.
+export function claveDeLote(sector, lote) {
+  return sector >= 3 ? `${sector}-${lote}` : String(lote);
+}
+
 // La única fila cuya columna B NO es plata: lleva texto —el número de la
 // cuenta, una aclaración al pie—. Pasarla por `numero` la marcaría de
 // ilegible, y ese aviso sería falso: nadie escribió mal un número, ahí nunca
@@ -287,6 +302,19 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     }
   });
 
+  // El sector de una fila: null si viene vacío (sectores 1 y 2); undefined si
+  // trae algo que no es un número entero positivo, con su aviso. Esa fila no se
+  // puede pegar a ningún lote sin adivinar, y adivinar es lo que esto evita.
+  const sector = (valor, pestana, fila) => {
+    if (valor === undefined || valor === null || String(valor).trim() === '') return null;
+    const n = aNumero(valor);
+    if (n === null || !Number.isInteger(n) || n < 1) {
+      avisos.push({ tipo: 'ilegible', pestana, fila, columna: 'Sector', valor: String(valor) });
+      return undefined;
+    }
+    return n;
+  };
+
   const abonosPorLote = new Map();
   cuerpo('Abonos').forEach((f, i) => {
     // El lote también avisa. Con `aNumero` pelado, un abono cuyo lote quedó en
@@ -295,11 +323,13 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     // detalle sin nada en pantalla que lo explicara.
     const lote = numero(f[1], 'Abonos', i + 2, 'Lote');
     const valor = numero(f[2], 'Abonos', i + 2, 'Valor');
-    if (lote === null || valor === null) return;
-    if (!abonosPorLote.has(lote)) abonosPorLote.set(lote, []);
+    const sec = sector(f[COLUMNA_SECTOR_ABONOS], 'Abonos', i + 2);
+    if (lote === null || valor === null || sec === undefined) return;
+    const clave = claveDeLote(sec, lote);
+    if (!abonosPorLote.has(clave)) abonosPorLote.set(clave, []);
     // `orden` sale del valor CRUDO de la celda, antes de formatearlo, y es
     // interno: se usa para ordenar y no viaja al navegador.
-    abonosPorLote.get(lote).push({
+    abonosPorLote.get(clave).push({
       orden: instanteDeFecha(f[0]),
       fecha: fechaLegible(f[0]),
       valor,
@@ -313,6 +343,9 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
       avisos.push({ tipo: 'ilegible', pestana: 'Cartera', fila: i + 2, columna: 'Lote', valor: String(f[0] ?? '') });
       return null;
     }
+    const sec = sector(f[COLUMNA_SECTOR_CARTERA], 'Cartera', i + 2);
+    if (sec === undefined) return null;
+    const id = claveDeLote(sec, lote);
     // La próxima cuota tiene TRES estados, no dos. Vacía es «no hay cuota
     // programada» y no es un error. Ilegible es un dato que no se pudo leer, y
     // con `aNumero` pelado se volvía null callado — indistinguible del vacío. La
@@ -323,6 +356,10 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
     const proximaCuotaValor = cuotaVacia ? null : numero(cuotaCruda, 'Cartera', i + 2, 'Próxima cuota');
     return {
       lote,
+      // El sector (null = sectores 1 y 2) y la clave con que el sitio cruza la
+      // fila con el plano. `lote` sigue siendo el número, para nombrarlo.
+      sector: sec,
+      id,
       area: aNumero(f[1]),
       comprador: String(f[2] ?? ''),
       precio: numero(f[3], 'Cartera', i + 2, 'Precio'),
@@ -337,7 +374,7 @@ export function normalizarTablero(crudo, { ahora = new Date() } = {}) {
       // Se copia antes de ordenar: `.sort()` ordena en sitio y dos filas con el mismo
       // lote recibían la MISMA instancia guardada en el Map, así que una mutaba a la otra.
       // El `orden` se quita al final: sirvió para ordenar y no es asunto del navegador.
-      abonos: [...(abonosPorLote.get(lote) ?? [])]
+      abonos: [...(abonosPorLote.get(id) ?? [])]
         .sort(porFecha)
         .map(({ orden, ...abono }) => abono)
     };

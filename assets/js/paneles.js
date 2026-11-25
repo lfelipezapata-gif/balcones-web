@@ -12,10 +12,10 @@
 // mismo dato que pinta el plano y la vitrina pública: números y estados
 // validados por `validarInventario`, sin texto libre de nadie.
 
-import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=8af9bab6';
+import { pesos, metros, pesosConSigno, porcentaje } from './formato.js?v=5eab7419';
 import {
-  validarInventario, precioDeLote, idLote, nombreLote, porSectorYNumero, cruzaConLaCartera
-} from './inventario.js?v=8af9bab6';
+  validarInventario, precioDeLote, idLote, nombreLote, porSectorYNumero, claveDeCartera, nombreDeCartera
+} from './inventario.js?v=5eab7419';
 
 // Los rótulos largos vienen del nombre de la fila en la hoja («Disponible»,
 // «Gastado en obra»). En la fila de seis cifras no caben y además «Disponible»
@@ -108,26 +108,20 @@ function ordenDeFecha(texto) {
   return null;
 }
 
-// Las filas de la cartera y de los abonos traen el lote como número a secas, y
-// solo pueden ser de los sectores 1 y 2 (ver `cruzaConLaCartera`): se nombran
-// «Lote 7». Un lote del inventario se nombra con `nombreLote`, que distingue el
-// Sector 3.
-const nombreDeLote = (n) => `Lote ${n}`;
-
-// La fila de la cartera de un lote del inventario. Un lote del Sector 3 no tiene
-// nunca, aunque su número coincida con uno de los sectores 1 y 2: la hoja todavía
-// no dice el sector, así que cruzarlo por el número le daría el comprador y los
-// abonos de otro lote.
+// La fila de la cartera de un lote del inventario, por sector y número (ver
+// `claveDeCartera`): el lote 1 del Sector 3 y el lote 1 de César son dos filas.
+// `porLote` se arma siempre con `carteraPorLote`.
 function filaDeCartera(porLote, lote) {
-  return cruzaConLaCartera(lote) ? porLote.get(lote.n) : undefined;
+  return porLote.get(idLote(lote));
 }
+const carteraPorLote = (cartera) => new Map((cartera ?? []).map(c => [claveDeCartera(c), c]));
 
 // Una fila de plata que la cartera no trajo. Se distingue del «$0» a propósito:
 // que no haya cifra no es que la cifra sea cero.
 const RAYA = '—';
 
 function detalleVendido(vista, inventario) {
-  const porLote = new Map((vista?.cartera ?? []).map(c => [c.lote, c]));
+  const porLote = carteraPorLote(vista?.cartera);
   const lotes = [...inventario.lotes]
     .filter(l => GRUPO_DE_ESTADO[l.estado] === 'vendidos')
     .sort(porSectorYNumero);
@@ -171,7 +165,7 @@ function detalleAbonado(vista) {
     for (const a of c.abonos ?? []) {
       filas.push({
         orden: ordenDeFecha(a.fecha),
-        celdas: [a.fecha || RAYA, nombreDeLote(c.lote), c.comprador || RAYA, a.valorTexto],
+        celdas: [a.fecha || RAYA, nombreDeCartera(c), c.comprador || RAYA, a.valorTexto],
         alerta: false
       });
     }
@@ -219,7 +213,7 @@ function detallePorCobrar(vista) {
     ],
     // De mayor a menor saldo: el que más debe es el que primero hay que mirar.
     filas: conSaldo.map(c => ({
-      celdas: [nombreDeLote(c.lote), c.comprador || RAYA, c.abonadoTexto, c.saldoTexto],
+      celdas: [nombreDeCartera(c), c.comprador || RAYA, c.abonadoTexto, c.saldoTexto],
       alerta: mencionaVencido(c.proximaCuotaTexto)
     })),
     pie: { etiqueta: `${conSaldo.length} ${conSaldo.length === 1 ? 'lote' : 'lotes'}`, valor: pesos(total) },
@@ -477,7 +471,7 @@ export function construirVistaLotes(vista, inventario) {
   validarInventario(inventario);
 
   const cartera = vista?.cartera ?? [];
-  const porLote = new Map(cartera.map(c => [c.lote, c]));
+  const porLote = carteraPorLote(cartera);
   const avisos = [];
 
   const conCartera = new Set();
@@ -504,12 +498,11 @@ export function construirVistaLotes(vista, inventario) {
       : fichaDisponible(lote, inventario.precioM2);
   });
 
-  // Solo los lotes que pueden tener fila en la cartera (sectores 1 y 2): un
-  // «lote 15» de la cartera no es el lote 15 del Sector 3.
-  const enElPlano = new Set(inventario.lotes.filter(cruzaConLaCartera).map(l => l.n));
+  // Por la misma clave: una fila «15» sin sector no es el lote 15 del Sector 3.
+  const enElPlano = new Set(inventario.lotes.map(idLote));
   for (const c of cartera) {
-    if (!enElPlano.has(c.lote)) {
-      avisos.push(`El lote ${c.lote} está en la cartera y no existe en el plano, así que no se puede abrir su ficha. Revisá data/lotes.json.`);
+    if (!enElPlano.has(claveDeCartera(c))) {
+      avisos.push(`El ${nombreDeCartera(c)} está en la cartera y no existe en el plano, así que no se puede abrir su ficha. Revisá data/lotes.json.`);
     }
   }
 
@@ -703,7 +696,7 @@ function grupoSinVender(lotes, precioM2) {
 export function construirTotalesLotes(vista, inventario) {
   validarInventario(inventario);
 
-  const porLote = new Map((vista?.cartera ?? []).map(c => [c.lote, c]));
+  const porLote = carteraPorLote(vista?.cartera);
   const lotes = [...inventario.lotes].sort(porSectorYNumero);
   const del = (clave) => lotes.filter(l => GRUPO_DE_ESTADO[l.estado] === clave);
 

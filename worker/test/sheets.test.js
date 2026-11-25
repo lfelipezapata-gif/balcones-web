@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPair, exportPKCS8, decodeJwt } from 'jose';
 import {
-  tokenDeAcceso, leerEspejo, aNumero, normalizarTablero, fechaLegible, instanteDeFecha
+  tokenDeAcceso, leerEspejo, aNumero, normalizarTablero, fechaLegible, instanteDeFecha, claveDeLote
 } from '../src/sheets.js';
 
 const AHORA = new Date('2026-08-31T21:50:00.000Z');
@@ -771,4 +771,65 @@ test('ordenar los abonos no cambia cuánto suman', () => {
   const uno = t.cartera.find(c => c.lote === 1);
   assert.equal(uno.abonos.length, 3);
   assert.equal(uno.abonos.reduce((s, a) => s + a.valor, 0), 235000000);
+});
+
+// --- El sector (25-nov-2026) ---------------------------------------------------
+// El Sector 3 numera del 1 al 64: el lote 1 del Sector 3 no es el lote 1 de César.
+// «Tablero Cartera» trae el sector en la columna K y «Tablero Abonos» en la E.
+const CON_SECTOR = {
+  ...CRUDO,
+  Cartera: [
+    ['Lote', 'Área', 'Comprador', 'Precio', 'Abonado', 'Saldo', 'Próxima cuota fecha', 'Próxima cuota valor', 'Estado', 'Promesa', 'Sector'],
+    [1, 2754, 'Comprador de prueba uno', 300000000, 30000000, 270000000, '27 de febrero de 2027', 54000000, 'Vendido', 46254, 1],
+    [14, 3000, 'Comprador lote 14', 300000000, 100000000, 200000000, '', '', 'Vendido', 45672, 2],
+    [1, 2301.73, 'Comprador del Sector 3', 220000000, 20000000, 200000000, '25 de enero de 2027', 100000000, 'Vendido', 46351, 3]
+  ],
+  Abonos: [
+    ['Fecha', 'Lote', 'Valor', 'Medio', 'Sector'],
+    [46259, 1, 30000000, 'Transferencia', ''],
+    [45672, 14, 100000000, 'Transferencia'],
+    [46351, 1, 20000000, 'Consignación', 3]
+  ]
+};
+
+test('claveDeLote: «3-15» en el Sector 3 y el número a secas en los sectores 1 y 2', () => {
+  assert.equal(claveDeLote(3, 15), '3-15');
+  assert.equal(claveDeLote(1, 7), '7');
+  assert.equal(claveDeLote(2, 14), '14');
+  assert.equal(claveDeLote(null, 7), '7');
+});
+
+test('el lote 1 del Sector 3 y el lote 1 de César son dos filas, cada una con sus abonos', () => {
+  const t = normalizarTablero(CON_SECTOR, { ahora: AHORA });
+  assert.deepEqual(t.avisos, []);
+  const cesar = t.cartera.find(c => c.id === '1');
+  const tres = t.cartera.find(c => c.id === '3-1');
+  assert.equal(cesar.sector, 1);
+  assert.equal(cesar.lote, 1);
+  assert.deepEqual(cesar.abonos.map(a => a.valor), [30000000]);
+  assert.equal(tres.sector, 3);
+  assert.equal(tres.lote, 1);
+  assert.equal(tres.comprador, 'Comprador del Sector 3');
+  assert.deepEqual(tres.abonos.map(a => a.valor), [20000000]);
+  assert.equal(tres.promesa, '25/11/2026');
+  assert.equal(t.cartera.find(c => c.id === '14').abonos.length, 1, 'un abono sin columna de sector es de los sectores 1 y 2');
+});
+
+test('una hoja sin la columna del sector sigue como antes: clave = número', () => {
+  const t = normalizarTablero(CRUDO, { ahora: AHORA });
+  assert.deepEqual(t.cartera.map(c => [c.id, c.sector]), [['1', null], ['14', null]]);
+  assert.equal(t.cartera[0].abonos.length, 1);
+});
+
+test('un sector ilegible avisa y la fila no se pega a ningún lote', () => {
+  const crudo = {
+    ...CON_SECTOR,
+    Cartera: [...CON_SECTOR.Cartera.slice(0, 3), [...CON_SECTOR.Cartera[3].slice(0, 10), 'tres']],
+    Abonos: [...CON_SECTOR.Abonos.slice(0, 3), [46351, 1, 20000000, 'Consignación', 0]]
+  };
+  const t = normalizarTablero(crudo, { ahora: AHORA });
+  assert.equal(t.cartera.length, 2);
+  assert.ok(!t.cartera.some(c => c.comprador === 'Comprador del Sector 3'));
+  assert.deepEqual(t.cartera.find(c => c.id === '1').abonos.map(a => a.valor), [30000000], 'el abono con sector 0 no se le pega a César');
+  assert.deepEqual(t.avisos.map(a => [a.pestana, a.fila, a.columna, a.valor]), [['Abonos', 4, 'Sector', '0'], ['Cartera', 4, 'Sector', 'tres']]);
 });

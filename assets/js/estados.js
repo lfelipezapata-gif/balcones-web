@@ -1,4 +1,4 @@
-import { idLote } from './inventario.js?v=8af9bab6';
+import { idLote } from './inventario.js?v=5eab7419';
 
 // Desde el 24-nov-2026 el estado de cada lote lo manda la app de ventas de
 // Balcones (https://ventas.urbansas.com.co), que usan los socios y el asesor de

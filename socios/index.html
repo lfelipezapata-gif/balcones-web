@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Balcones — Tablero de socios</title>
-<link rel="stylesheet" href="../assets/css/estilos.css?v=8af9bab6">
+<link rel="stylesheet" href="../assets/css/estilos.css?v=5eab7419">
 <link rel="icon" href="../img/favicon-32.png" sizes="32x32">
 <script src="https://accounts.google.com/gsi/client" async></script>
 </head>
@@ -97,14 +97,14 @@
 </main>
 
 <script type="module">
-import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=8af9bab6';
-import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=8af9bab6';
+import { GOOGLE_CLIENT_ID, API_TABLERO } from '../assets/js/config.js?v=5eab7419';
+import { construirVistaTablero, escapar } from '../assets/js/tablero.js?v=5eab7419';
 import {
   construirCifras, construirVistaLotes, construirVistaGastos, construirVistaSocios,
   construirTotalesLotes, construirVistaCaja, construirDetalleCifra
-} from '../assets/js/paneles.js?v=8af9bab6';
-import { pintarMapa } from '../assets/js/mapa.js?v=8af9bab6';
-import { pedirEstados, aplicarEstados } from '../assets/js/estados.js?v=8af9bab6';
+} from '../assets/js/paneles.js?v=5eab7419';
+import { pintarMapa } from '../assets/js/mapa.js?v=5eab7419';
+import { pedirEstados, aplicarEstados } from '../assets/js/estados.js?v=5eab7419';
 
 const $ = (id) => document.getElementById(id);
 
@@ -116,7 +116,7 @@ const $ = (id) => document.getElementById(id);
 let inventarioPedido = null;
 function inventarioAlDia() {
   inventarioPedido ??= Promise.all([
-    fetch('../data/lotes.json?v=8af9bab6').then(r => r.json()),
+    fetch('../data/lotes.json?v=5eab7419').then(r => r.json()),
     pedirEstados()
   ]).then(([base, estados]) => aplicarEstados(base, estados).inv);
   return inventarioPedido;
@@ -209,7 +209,7 @@ async function montarPlano(vista) {
   // cada lote lo pone el CSS sobre los <path>, y a un <img> no se le puede
   // entrar desde afuera.
   const caja = $('mapa');
-  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=8af9bab6')).text();
+  caja.innerHTML = await (await fetch('../img/mapa-aereo.svg?v=5eab7419')).text();
   const svg = caja.querySelector('svg');
 
   // Es el MISMO archivo que usa la vitrina pública, a propósito: dos planos

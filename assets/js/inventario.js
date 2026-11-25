@@ -54,13 +54,18 @@ export function nombreLote(l) {
 // Por sector y, dentro del sector, por número.
 export const porSectorYNumero = (a, b) => (a.sector ?? 0) - (b.sector ?? 0) || a.n - b.n;
 
-// La cartera y los abonos llegan de la hoja con el lote como NÚMERO A SECAS, sin
-// sector (worker/src/sheets.js). Hasta que la hoja y el Worker distingan el
-// sector, una fila de la cartera solo puede ser de un lote de los sectores 1 y 2.
-// Un lote del Sector 3 nunca se cruza con ella: si se cruzara por el número, el
-// lote 1 del sector 3 recibiría el comprador y los abonos del lote 1 del sector 1.
-export function cruzaConLaCartera(l) {
-  return !(l.sector >= 3);
+// La cartera y los abonos llegan de la hoja con el número del lote y, desde el
+// 25-nov-2026, su sector: el Worker manda `id` con la misma regla de `idLote`
+// («3-15» en el Sector 3, el número a secas en los sectores 1 y 2). Una fila sin
+// `id` viene de un Worker anterior, que no distinguía el sector: su número solo
+// puede ser de los sectores 1 y 2. Cruzar por el número pelado le daría al lote 1
+// del Sector 3 el comprador y los abonos del lote 1 del sector 1, el de César.
+export function claveDeCartera(c) {
+  return typeof c?.id === 'string' && c.id !== '' ? c.id : String(c?.lote);
+}
+
+export function nombreDeCartera(c) {
+  return nombreLote({ sector: typeof c?.sector === 'number' ? c.sector : 1, n: c?.lote });
 }
 
 // El área viene del plano: entera en los sectores 1 y 2 y con centésimas en el
